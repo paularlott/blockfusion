@@ -44,7 +44,39 @@ export function exec(editor: Editor, label: string, cmd: string, value?: string)
  * Tidy what browser editing commands leave behind: lists wrapped in <p>
  * (Chrome), obsolete <strike>, and empty style attributes.
  */
+/**
+ * Browsers' bold and italic commands write <b> and <i>; store the semantic
+ * <strong> and <em>. Elements with a class are left alone, as <i> is often
+ * an icon (<i class="fa fa-star">).
+ */
+export function semanticInline(root: HTMLElement): void {
+	const map: Record<string, string> = { B: 'strong', I: 'em' };
+	const found = Array.from(root.querySelectorAll('b:not([class]), i:not([class])'));
+	if (!found.length) return;
+	// Keep the selection: children move across unchanged, so a boundary on a
+	// replaced element maps to the same offset in its replacement.
+	const sel = root.ownerDocument.getSelection();
+	const range = sel && sel.rangeCount && root.contains(sel.getRangeAt(0).commonAncestorContainer) ? sel.getRangeAt(0) : null;
+	const saved = range && [range.startContainer, range.startOffset, range.endContainer, range.endOffset] as const;
+	const swapped = new Map<Node, Node>();
+	for (const el of found) {
+		const out = root.ownerDocument.createElement(map[el.tagName]);
+		for (const a of Array.from(el.attributes)) out.setAttribute(a.name, a.value);
+		while (el.firstChild) out.appendChild(el.firstChild);
+		el.replaceWith(out);
+		swapped.set(el, out);
+	}
+	if (saved && sel) {
+		const r = root.ownerDocument.createRange();
+		r.setStart(swapped.get(saved[0]) ?? saved[0], saved[1]);
+		r.setEnd(swapped.get(saved[2]) ?? saved[2], saved[3]);
+		sel.removeAllRanges();
+		sel.addRange(r);
+	}
+}
+
 export function normaliseContent(root: HTMLElement): void {
+	semanticInline(root);
 	for (const list of Array.from(root.querySelectorAll('p > ul, p > ol'))) {
 		const p = list.parentElement!;
 		const others = Array.from(p.childNodes).filter((n) => n !== list && !(n.nodeType === 3 && !n.textContent!.trim()) && (n as Element).tagName !== 'BR');

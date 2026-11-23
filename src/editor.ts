@@ -22,7 +22,7 @@ import type {
 	Plugin,
 	ToolbarItem,
 } from './types';
-import { normaliseContent } from './commands/text';
+import { normaliseContent, semanticInline } from './commands/text';
 import { Canvas } from './ui/canvas';
 import { deepActiveElement } from './ui/dialog';
 import { h, isMac } from './ui/dom';
@@ -539,6 +539,7 @@ export class Editor {
 			img.classList.remove('bf-selected');
 			if (!img.getAttribute('class')) img.removeAttribute('class');
 		}
+		semanticInline(copy);
 		let html = copy.innerHTML.trim();
 		if (/^(<p>)?(<br>)?(<\/p>)?$/.test(html)) html = '';
 		return this.converter.mapHtml(html, 'in');
