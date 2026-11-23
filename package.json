@@ -1,0 +1,26 @@
+{
+  "name": "blockfusion",
+  "version": "0.1.0",
+  "description": "A dependency-free WYSIWYG page-content editor built on rows, columns and blocks.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/blockfusion.js",
+  "module": "dist/blockfusion.mjs",
+  "style": "dist/blockfusion.css",
+  "files": ["dist", "src", "README.md", "ARCHITECTURE.md"],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "demo": "python3 -m http.server 8080",
+    "vendor": "node scripts/vendor.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "jsdom": "31.0.1",
+    "typescript": "5.9.3",
+    "vitest": "5.1.1"
+  }
+}
