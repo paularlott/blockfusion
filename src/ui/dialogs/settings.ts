@@ -156,9 +156,9 @@ export async function settingsDialog(editor: Editor, kind: 'row' | 'col', id: st
 	});
 }
 
-/** The background colour field: the text box and the picker on one line, the hint under both. */
-function colorField(text: HTMLInputElement, picker: HTMLInputElement): HTMLElement {
-	const f = field('Background colour', text, 'Any CSS colour, e.g. #f5f7fa');
+/** A colour field: the text box and the picker on one line, the hint under both. */
+export function colorField(text: HTMLInputElement, picker: HTMLInputElement, label = 'Background colour', hint = 'Any CSS colour, e.g. #f5f7fa'): HTMLElement {
+	const f = field(label, text, hint);
 	const line = h('div', { className: 'bf-input-line' });
 	text.replaceWith(line);
 	line.append(text, picker);

@@ -12,6 +12,7 @@ import {
 	toggleBlockquote,
 } from '../commands/text';
 import type { Editor } from '../editor';
+import { textColorDialog } from '../ui/dialogs/color';
 import type { Command, MenuItem, Plugin } from '../types';
 
 const BLOCKS: Array<{ tag: string; name: string; shortcut?: string }> = [
@@ -134,6 +135,11 @@ export const formattingPlugin: Plugin = {
 						checked: !!cur && norm(cur) === norm(c.value),
 						run: () => void applyInlineStyle(ed, `Colour: ${c.name}`, 'color', c.value),
 					})),
+					{
+						label: 'Custom colour…',
+						checked: !!cur && !ed.options.colors.some((c) => norm(cur) === norm(c.value)),
+						run: () => void textColorDialog(ed),
+					},
 				];
 			},
 		});

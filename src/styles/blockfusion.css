@@ -811,3 +811,21 @@
 		border-color: CanvasText;
 	}
 }
+
+/* Custom text colour preview */
+.bf-color-sample {
+	margin: 0;
+	padding: 12px 14px;
+	border: 1px solid var(--bf-border);
+	border-radius: 8px;
+	background: #fff;
+	line-height: 1.4;
+}
+.bf-contrast[data-state='bad'] {
+	color: var(--bf-danger);
+	font-weight: 600;
+}
+.bf-contrast[data-state='ok'],
+.bf-contrast[data-state='warn'] {
+	color: var(--bf-fg);
+}
