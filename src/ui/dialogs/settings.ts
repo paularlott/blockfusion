@@ -70,6 +70,11 @@ export async function settingsDialog(editor: Editor, kind: 'row' | 'col', id: st
 	const bgColor = input({ value: style.color, autocomplete: 'off' });
 	const picker = h('input', { type: 'color', className: 'bf-color', 'aria-label': 'Pick background colour', value: /^#[0-9a-f]{6}$/i.test(style.color) ? style.color : '#ffffff' });
 	picker.addEventListener('input', () => (bgColor.value = picker.value));
+	// Keep the picker in step with a typed hex colour
+	bgColor.addEventListener('input', () => {
+		const v = bgColor.value.trim();
+		if (/^#[0-9a-f]{6}$/i.test(v)) picker.value = v;
+	});
 	const bgImage = input({ value: style.image, inputmode: 'url' });
 	const rest = input({ value: style.rest, autocomplete: 'off', spellcheck: 'false' });
 	const extra = h('textarea', { className: 'bf-input', rows: '3', spellcheck: 'false' }) as HTMLTextAreaElement;
@@ -99,7 +104,7 @@ export async function settingsDialog(editor: Editor, kind: 'row' | 'col', id: st
 		field('CSS classes', cls, 'Separate classes with spaces. Grid classes are managed for you.'),
 		field('Element id', elId),
 		field('Element', tag),
-		h('div', { className: 'bf-inline-fields' }, field('Background colour', bgColor, 'Any CSS colour, e.g. #f5f7fa'), picker),
+		colorField(bgColor, picker),
 		field('Background image address', bgImage),
 		field('Other inline style', rest, 'For example: padding: 2rem 0'),
 		field('Custom attributes', extra, 'One per line, e.g. data-section="intro" or aria-label="Intro"'),
@@ -149,4 +154,13 @@ export async function settingsDialog(editor: Editor, kind: 'row' | 'col', id: st
 			);
 		},
 	});
+}
+
+/** The background colour field: the text box and the picker on one line, the hint under both. */
+function colorField(text: HTMLInputElement, picker: HTMLInputElement): HTMLElement {
+	const f = field('Background colour', text, 'Any CSS colour, e.g. #f5f7fa');
+	const line = h('div', { className: 'bf-input-line' });
+	text.replaceWith(line);
+	line.append(text, picker);
+	return f;
 }

@@ -644,13 +644,25 @@
 	accent-color: var(--bf-primary-solid);
 }
 .bf-color {
+	flex: none;
 	width: 44px;
-	height: 36px;
+	height: auto;
+	min-height: 36px;
 	padding: 2px;
 	border: 1px solid var(--bf-control);
 	border-radius: 6px;
 	background: var(--bf-surface);
-	align-self: end;
+	cursor: pointer;
+}
+/* A text box with a control beside it (the colour picker), the same height */
+.bf-input-line {
+	display: flex;
+	align-items: stretch;
+	gap: 8px;
+}
+.bf-input-line > .bf-input {
+	flex: 1;
+	min-width: 0;
 }
 .bf-inline-fields {
 	display: flex;
