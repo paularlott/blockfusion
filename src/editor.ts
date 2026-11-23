@@ -21,6 +21,7 @@ import type {
 	Plugin,
 	ToolbarItem,
 } from './types';
+import { normaliseContent } from './commands/text';
 import { Canvas } from './ui/canvas';
 import { deepActiveElement } from './ui/dialog';
 import { h, isMac } from './ui/dom';
@@ -515,7 +516,9 @@ export class Editor {
 		const before = clone(this.doc);
 		this.suppressInput++;
 		try {
-			fn(this.canvas.doc, this.canvas.content(colId)!, colId);
+			const content = this.canvas.content(colId)!;
+			fn(this.canvas.doc, content, colId);
+			normaliseContent(content);
 		} finally {
 			this.suppressInput--;
 		}
@@ -621,7 +624,7 @@ export class Editor {
 			{
 				announce: (d) => `${label}: row ${d.rows.findIndex((r) => r.id === fresh[0].id) + 1} of ${d.rows.length}`,
 			},
-		);
+		) && (this.canvas.rowEl(fresh[0].id)?.scrollIntoView({ block: 'nearest' }), true);
 	}
 
 	/** Neutral rows for a block. HTML blocks are detected and converted. */

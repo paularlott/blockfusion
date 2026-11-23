@@ -14,6 +14,11 @@ const LINK_MARKER = 'https://bf-link-marker.invalid/';
 function selectionNode(editor: Editor): Node | null {
 	const r = editor.canvas.range;
 	if (!r || !editor.canvas.selectionCol) return null;
+	// A selection set around elements (e.g. after styling) starts at a child.
+	if (!r.collapsed && r.startContainer.nodeType === 1) {
+		const child = r.startContainer.childNodes[r.startOffset];
+		if (child) return child;
+	}
 	return r.startContainer;
 }
 
@@ -33,6 +38,65 @@ export function commandState(editor: Editor, cmd: string): boolean {
 
 export function exec(editor: Editor, label: string, cmd: string, value?: string): boolean {
 	return editor.runText(label, (d) => d.execCommand(cmd, false, value));
+}
+
+/**
+ * Tidy what browser editing commands leave behind: lists wrapped in <p>
+ * (Chrome), obsolete <strike>, and empty style attributes.
+ */
+export function normaliseContent(root: HTMLElement): void {
+	for (const list of Array.from(root.querySelectorAll('p > ul, p > ol'))) {
+		const p = list.parentElement!;
+		const others = Array.from(p.childNodes).filter((n) => n !== list && !(n.nodeType === 3 && !n.textContent!.trim()) && (n as Element).tagName !== 'BR');
+		if (!others.length) p.replaceWith(list);
+		else p.after(list);
+	}
+	for (const el of Array.from(root.querySelectorAll('strike'))) {
+		const s = root.ownerDocument.createElement('s');
+		while (el.firstChild) s.appendChild(el.firstChild);
+		el.replaceWith(s);
+	}
+	for (const el of Array.from(root.querySelectorAll('[style=""]'))) el.removeAttribute('style');
+	// formatBlock can leave completely empty paragraphs (no <br>) around the
+	// block it changed; they are invisible and cannot hold the caret.
+	for (const el of Array.from(root.querySelectorAll('p:empty'))) el.remove();
+}
+
+const INDENT_STEP = 40;
+const INDENTABLE = 'p,h1,h2,h3,h4,h5,h6,pre,blockquote,div';
+
+/** Top-level blocks of a column that the range touches. */
+function blocksInRange(content: HTMLElement, range: Range): HTMLElement[] {
+	const out: HTMLElement[] = [];
+	for (const el of Array.from(content.children) as HTMLElement[]) {
+		if (el.matches(INDENTABLE) && range.intersectsNode(el)) out.push(el);
+	}
+	return out;
+}
+
+/**
+ * Indent or outdent: list items nest (browser command); other blocks get a
+ * left margin in 40px steps rather than Chrome's styled blockquote.
+ */
+export function indent(editor: Editor, delta: 1 | -1): boolean {
+	const label = delta > 0 ? 'Increase indent' : 'Decrease indent';
+	return editor.runText(label, (d, content) => {
+		const sel = d.getSelection();
+		if (!sel?.rangeCount) return;
+		const range = sel.getRangeAt(0);
+		const start = elementOf(range.startContainer);
+		if (start?.closest('li') && content.contains(start.closest('li'))) {
+			d.execCommand(delta > 0 ? 'indent' : 'outdent');
+			return;
+		}
+		for (const block of blocksInRange(content, range)) {
+			const now = parseFloat(block.style.marginLeft) || 0;
+			const next = Math.max(0, now + delta * INDENT_STEP);
+			if (next) block.style.marginLeft = `${next}px`;
+			else block.style.removeProperty('margin-left');
+			if (!block.getAttribute('style')) block.removeAttribute('style');
+		}
+	});
 }
 
 const BLOCK_TAGS = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'blockquote', 'li', 'div'];
@@ -110,6 +174,17 @@ export function applyInlineStyle(editor: Editor, label: string, prop: string, va
 			// Spans left with no attributes are just noise.
 			for (const inner of Array.from(font.querySelectorAll('span:not([class]):not([style]):not([id])'))) {
 				inner.replaceWith(...Array.from(inner.childNodes));
+			}
+			// Styling exactly the text of an existing styled span: merge into it.
+			const parent = font.parentElement;
+			const alone = parent && parent.tagName === 'SPAN' && parent !== content && Array.from(parent.childNodes).every((n) => n === font || (n.nodeType === 3 && !n.textContent));
+			if (alone && parent.hasAttribute('style')) {
+				if (value) parent.style.setProperty(prop, value);
+				else parent.style.removeProperty(prop);
+				font.replaceWith(...Array.from(font.childNodes));
+				if (!parent.getAttribute('style')) parent.replaceWith(...Array.from(parent.childNodes));
+				else spans.push(parent);
+				continue;
 			}
 			const span = d.createElement('span');
 			if (value) span.style.setProperty(prop, value);

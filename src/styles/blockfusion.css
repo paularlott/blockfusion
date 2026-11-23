@@ -329,8 +329,14 @@
 	color: var(--bf-fg);
 }
 .bf-panel-body {
+	display: grid;
+	gap: 12px;
+	align-content: start;
 	padding: 12px 14px;
 	overflow: auto;
+}
+.bf-panel-body > .bf-hint {
+	margin-top: -4px;
 }
 
 @container (max-width: 760px) {
@@ -351,6 +357,16 @@
 	}
 	.bf-stage {
 		padding: 6px;
+	}
+}
+
+/* On small screens a wrapped toolbar is tall; let it scroll away. */
+@container (max-width: 600px) {
+	.bf-header {
+		position: static;
+	}
+	.bf-toolbar {
+		padding: 4px;
 	}
 }
 

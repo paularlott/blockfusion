@@ -7,6 +7,7 @@ import {
 	currentStyle,
 	exec,
 	inBlockquote,
+	indent,
 	setBlock,
 	toggleBlockquote,
 } from '../commands/text';
@@ -141,8 +142,8 @@ export const formattingPlugin: Plugin = {
 
 		simple('ul', 'Bulleted list', 'ul', 'insertUnorderedList', 'Mod+Shift+8');
 		simple('ol', 'Numbered list', 'ol', 'insertOrderedList', 'Mod+Shift+7');
-		simple('outdent', 'Decrease indent', 'outdent', 'outdent', 'Mod+[', false);
-		simple('indent', 'Increase indent', 'indent', 'indent', 'Mod+]', false);
+		add({ id: 'outdent', label: 'Decrease indent', icon: 'outdent', shortcut: 'Mod+[', run: (ed) => void indent(ed, -1) }, false);
+		add({ id: 'indent', label: 'Increase indent', icon: 'indent', shortcut: 'Mod+]', run: (ed) => void indent(ed, 1) }, false);
 		add({ id: 'quote', label: 'Quote', icon: 'quote', shortcut: 'Mod+Shift+9', run: (ed) => void toggleBlockquote(ed), isActive: inBlockquote });
 		editor.addToolbarItem({ type: 'separator', id: 'sep-lists' });
 

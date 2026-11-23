@@ -12,8 +12,9 @@ import { openMenu } from './menu';
 /** Turn "Mod+Shift+7" into a display string and an aria-keyshortcuts value. */
 export function describeShortcut(shortcut: string): { text: string; aria: string } {
 	const parts = shortcut.split('+');
+	const keys: Record<string, string> = { ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→', Mod: isMac ? '⌘' : 'Ctrl', Alt: isMac ? '⌥' : 'Alt', Shift: isMac ? '⇧' : 'Shift' };
 	const text = parts
-		.map((p) => (p === 'Mod' ? (isMac ? '⌘' : 'Ctrl') : p === 'Alt' ? (isMac ? '⌥' : 'Alt') : p === 'Shift' ? (isMac ? '⇧' : 'Shift') : p))
+		.map((p) => keys[p] ?? (p.length === 1 ? p.toUpperCase() : p))
 		.join(isMac ? '' : '+');
 	const aria = parts.map((p) => (p === 'Mod' ? (isMac ? 'Meta' : 'Control') : p)).join('+');
 	return { text, aria };

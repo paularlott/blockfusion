@@ -1,0 +1,23 @@
+[
+	{
+		"id": "demo-bootstrap-cards",
+		"name": "Cards (Bootstrap 5 HTML)",
+		"category": "From a URL",
+		"description": "Given as Bootstrap 5 markup; converted to the active framework on insert.",
+		"rows": "<div class=\"row\"><div class=\"col-12 col-md-6\"><h3>Left card</h3><p>Written for Bootstrap 5.</p><p><a class=\"btn btn-primary\" href=\"#\">Primary</a></p></div><div class=\"col-12 col-md-6\"><h3>Right card</h3><p class=\"d-none d-md-block\">Hidden on small screens.</p><p><a class=\"btn btn-secondary\" href=\"#\">Secondary</a></p></div></div>"
+	},
+	{
+		"id": "demo-tailwind-strip",
+		"name": "Three columns (Tailwind HTML)",
+		"category": "From a URL",
+		"description": "Given as Tailwind markup.",
+		"rows": "<div class=\"grid grid-cols-12 gap-6\"><div class=\"col-span-12 md:col-span-4\"><p>One</p></div><div class=\"col-span-12 md:col-span-4\"><p>Two</p></div><div class=\"col-span-12 md:col-span-4\"><p>Three</p></div></div>"
+	},
+	{
+		"id": "demo-embed",
+		"name": "Embed placeholder (raw HTML)",
+		"category": "From a URL",
+		"description": "A raw HTML row kept exactly as written.",
+		"rows": "<!--bf:raw--><div class=\"embed\" data-embed=\"map\">Map embed goes here</div><!--/bf:raw-->"
+	}
+]
