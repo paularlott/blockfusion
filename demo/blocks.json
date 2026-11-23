@@ -1,23 +1,46 @@
 [
 	{
-		"id": "demo-bootstrap-cards",
-		"name": "Cards (Bootstrap 5 HTML)",
+		"id": "demo-cards",
+		"name": "Two cards",
 		"category": "From a URL",
-		"description": "Given as Bootstrap 5 markup; converted to the active framework on insert.",
-		"rows": "<div class=\"row\"><div class=\"col-12 col-md-6\"><h3>Left card</h3><p>Written for Bootstrap 5.</p><p><a class=\"btn btn-primary\" href=\"#\">Primary</a></p></div><div class=\"col-12 col-md-6\"><h3>Right card</h3><p class=\"d-none d-md-block\">Hidden on small screens.</p><p><a class=\"btn btn-secondary\" href=\"#\">Secondary</a></p></div></div>"
+		"description": "A row of two columns written in the block JSON format.",
+		"rows": [
+			{
+				"cols": [
+					{ "span": 6, "html": "<h3>Left card</h3><p>Rendered for whichever framework is active.</p><p><a class=\"button accent\" href=\"#\">Primary</a></p>" },
+					{ "span": 6, "html": "<h3>Right card</h3><p class=\"hidden-t\">Hidden on small screens.</p><p><a class=\"button primary\" href=\"#\">Secondary</a></p>" }
+				]
+			}
+		]
 	},
 	{
-		"id": "demo-tailwind-strip",
-		"name": "Three columns (Tailwind HTML)",
+		"id": "demo-three",
+		"name": "Three columns",
 		"category": "From a URL",
-		"description": "Given as Tailwind markup.",
-		"rows": "<div class=\"grid grid-cols-12 gap-6\"><div class=\"col-span-12 md:col-span-4\"><p>One</p></div><div class=\"col-span-12 md:col-span-4\"><p>Two</p></div><div class=\"col-span-12 md:col-span-4\"><p>Three</p></div></div>"
+		"description": "Spans set per breakpoint: full width on phones, halves on tablets, thirds on desktops.",
+		"rows": [
+			{
+				"className": "demo-strip",
+				"cols": [
+					{ "span": { "base": 12, "sm": 6, "md": 4 }, "html": "<p>One</p>" },
+					{ "span": { "base": 12, "sm": 6, "md": 4 }, "html": "<p>Two</p>" },
+					{ "span": { "base": 12, "sm": 12, "md": 4 }, "html": "<p>Three</p>" }
+				]
+			}
+		]
 	},
 	{
 		"id": "demo-embed",
-		"name": "Embed placeholder (raw HTML)",
+		"name": "Embed (raw HTML)",
 		"category": "From a URL",
-		"description": "A raw HTML row kept exactly as written.",
-		"rows": "<!--bf:raw--><div class=\"embed\" data-embed=\"map\">Map embed goes here</div><!--/bf:raw-->"
+		"description": "A raw HTML/JavaScript row kept exactly as written.",
+		"rows": [ { "raw": "<div class=\"embed\" data-embed=\"map\">Map embed goes here</div>" } ]
+	},
+	{
+		"id": "demo-bootstrap-html",
+		"name": "Cards (Bootstrap 5 HTML)",
+		"category": "From a URL",
+		"description": "Blocks can also be given as HTML in any known framework; it is converted on insert.",
+		"rows": "<div class=\"row\"><div class=\"col-12 col-md-6\"><h3>Left</h3><p>Written for Bootstrap 5.</p></div><div class=\"col-12 col-md-6\"><h3>Right</h3><p>Converted to the active framework.</p></div></div>"
 	}
 ]

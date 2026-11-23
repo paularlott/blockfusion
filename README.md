@@ -255,16 +255,33 @@ interface Converter {
 
 ## Blocks
 
-```js
+A block is one or more rows of columns, described as data rather than markup, so it is written once and rendered for whichever framework is active when it is inserted:
+
+```json
 {
-	id: 'hero',
-	name: 'Hero',
-	category: 'Headers',            // optional, used by the category filter
-	description: 'Large heading…',  // optional, shown and read out
-	thumbnail: '/img/hero.png',     // optional; otherwise a schematic preview is drawn
-	rows: [ /* neutral rows */ ]    // or a string of HTML in any known framework
+	"id": "text-image",
+	"name": "Text and image",
+	"category": "Text",
+	"description": "Text on the left, image on the right.",
+	"thumbnail": "/img/text-image.png",
+	"rows": [
+		{
+			"className": "highlight",
+			"cols": [
+				{ "span": 6, "html": "<h2>Tell the story</h2><p>…</p>" },
+				{ "span": 6, "html": "<img src=\"/img/photo.jpg\" alt=\"…\">" }
+			]
+		},
+		{ "raw": "<iframe src=\"…\" title=\"Map\"></iframe>" }
+	]
 }
 ```
+
+- `span`: a number of twelfths from the md breakpoint up, so columns stack on phones. An object such as `{ "base": 12, "sm": 6, "md": 4 }` sets each breakpoint.
+- A column with `"kind": "raw"` holds verbatim HTML/JavaScript. A row written as `{ "raw": "…" }` is a raw row.
+- `className`, `id`, `style` and `tag` can go on a row or a column, and any other attributes go in `attrs`.
+- Ids and kinds are optional. `category`, `description` and `thumbnail` are optional too; without a thumbnail, a schematic preview is drawn.
+- `rows` may also be a string of HTML in any known framework. It is detected and converted on insert, which is handy for pasting existing markup, but the JSON form is the one to write by hand.
 
 There are three ways to supply blocks:
 
@@ -272,7 +289,7 @@ There are three ways to supply blocks:
 - the `blocksUrl` option, pointing at a JSON array;
 - `editor.addBlocks([...])`, from code or a plugin.
 
-The block list updates live. In neutral rows, ids may be empty, because fresh ids are assigned on insert. Use the neutral button and visibility classes so blocks look right in every framework.
+The block list updates live, and fresh ids are assigned on insert. Use the neutral button and visibility classes so blocks look right in every framework.
 
 The 14 built-in blocks are:
 

@@ -3,6 +3,7 @@
  * together. Structural changes go through `apply()`, text changes through
  * `runText()` or typing, so every change lands in the history.
  */
+import { normalizeBlock } from './blocks/normalize';
 import { loadHTML } from './converters/convert';
 import { getConverter } from './converters/registry';
 import type { Converter } from './converters/types';
@@ -379,7 +380,9 @@ export class Editor {
 		this.handleActions.push(action);
 	}
 
-	addBlocks(blocks: Block[]): void {
+	addBlocks(input: Block[] | unknown[]): void {
+		// Blocks may be written in the short JSON form; fill in the defaults
+		const blocks = (input as unknown[]).map(normalizeBlock).filter((b): b is Block => b !== null);
 		const ids = new Set(blocks.map((b) => b.id));
 		this.blocks = [...this.blocks.filter((b) => !ids.has(b.id)), ...blocks];
 		this.emit('blockschange');
