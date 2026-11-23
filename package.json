@@ -7,7 +7,12 @@
   "main": "dist/blockfusion.js",
   "module": "dist/blockfusion.mjs",
   "style": "dist/blockfusion.css",
-  "files": ["dist", "src", "README.md", "ARCHITECTURE.md"],
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "ARCHITECTURE.md"
+  ],
   "scripts": {
     "build": "node scripts/build.mjs",
     "watch": "node scripts/build.mjs --watch",
@@ -18,6 +23,7 @@
     "vendor": "node scripts/vendor.mjs"
   },
   "devDependencies": {
+    "@types/node": "24.19.2",
     "esbuild": "0.28.2",
     "jsdom": "31.0.1",
     "typescript": "5.9.3",

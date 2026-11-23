@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>BlockFusion demo</title>
+	<link rel="stylesheet" href="../dist/blockfusion.css">
+	<style>
+		:root {
+			color-scheme: light;
+			--page-bg: #f5f7fa; --page-fg: #0f172a; --page-muted: #475569; --page-surface: #ffffff; --page-border: #cbd3dd; --page-control: #7c8797; --page-focus: #0e7490;
+		}
+		@media (prefers-color-scheme: dark) {
+			:root:not([data-theme="light"]) { color-scheme: dark; --page-bg: #0b1118; --page-fg: #e6edf3; --page-muted: #a9b6c4; --page-surface: #111923; --page-border: #33455a; --page-control: #6f8297; --page-focus: #38bdd4; }
+		}
+		:root[data-theme="dark"] { color-scheme: dark; --page-bg: #0b1118; --page-fg: #e6edf3; --page-muted: #a9b6c4; --page-surface: #111923; --page-border: #33455a; --page-control: #6f8297; --page-focus: #38bdd4; }
+		* { box-sizing: border-box; }
+		body { margin: 0; background: var(--page-bg); color: var(--page-fg); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+		header.demo { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 14px 16px; border-bottom: 1px solid var(--page-border); background: var(--page-surface); }
+		header.demo h1 { margin: 0; font-size: 20px; }
+		.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+		.controls label { font-weight: 600; }
+		select, .demo-btn { min-height: 36px; padding: 6px 10px; border: 1px solid var(--page-control); border-radius: 6px; background: var(--page-surface); color: var(--page-fg); font: inherit; }
+		.demo-btn { cursor: pointer; font-weight: 600; }
+		.demo-btn[aria-pressed="true"] { background: #0e7490; border-color: #0e7490; color: #ffffff; }
+		:focus-visible { outline: 2px solid var(--page-focus); outline-offset: 2px; }
+		main { max-width: 1400px; margin: 0 auto; padding: 16px; }
+		.hint { color: var(--page-muted); margin: 0 0 12px; }
+		form { display: grid; gap: 12px; }
+		.output { margin-top: 16px; }
+		.output h2 { font-size: 16px; margin: 0 0 8px; }
+		.output pre { margin: 0; max-height: 420px; overflow: auto; padding: 12px; border: 1px solid var(--page-border); border-radius: 8px; background: var(--page-surface); color: var(--page-fg); font: 12.5px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; word-break: break-word; }
+		.check { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+		.check input { width: 20px; height: 20px; margin: 0; }
+		.form-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+	</style>
+</head>
+<body>
+	<header class="demo">
+		<h1>BlockFusion demo</h1>
+		<div class="controls">
+			<span>
+				<label for="framework">Framework</label>
+				<select id="framework">
+					<option value="fusioncss">fusionCSS</option>
+					<option value="bootstrap3">Bootstrap 3</option>
+					<option value="bootstrap5">Bootstrap 5</option>
+					<option value="foundation5">Foundation 5</option>
+					<option value="foundation6">Foundation 6</option>
+					<option value="tailwind">Tailwind CSS</option>
+					<option value="cssgrid">CSS grid</option>
+				</select>
+			</span>
+			<button type="button" class="demo-btn" id="theme" aria-pressed="false">Dark theme</button>
+			<label class="check"><input type="checkbox" id="media" checked> Demo media provider</label>
+			<button type="button" class="demo-btn" id="show-output" aria-expanded="false" aria-controls="output">Show output</button>
+		</div>
+	</header>
+	<main>
+		<p class="hint">Edit the page below. Press Alt+F10 to reach the toolbar, and Escape in any column to reach its handle menu. The output is kept in a normal form field.</p>
+		<form id="page-form" action="#" method="post">
+			<textarea id="content" name="content"><div class="row">
+	<div class="span-t12">
+<h1>Welcome to BlockFusion</h1><p>A page editor built on <strong>rows</strong>, <em>columns</em> and blocks. Switch the framework above and the same content is written as that framework's markup.</p><p><a class="button accent" href="#start">Get started</a> <a class="button primary" href="#more">Learn more</a></p>
+	</div>
+</div>
+<div class="row">
+	<div class="span-s6">
+<h2>Real WYSIWYG</h2><p>The canvas loads the site's own stylesheets, so what you see is how the page looks.</p>
+	</div>
+	<div class="span-s6">
+<h2>Any framework</h2><p>Content converts between fusionCSS, Bootstrap, Foundation, Tailwind and plain CSS grid.</p><p class="hidden-t">This line is hidden on phones.</p>
+	</div>
+</div>
+<!--bf:raw--><div id="clock" style="padding:8px;border:1px solid #ccc">Clock: <span>…</span></div>
+<script>document.querySelector('#clock span').textContent = new Date().toLocaleTimeString();</script><!--/bf:raw--></textarea>
+			<div class="form-actions">
+				<button type="submit" class="demo-btn">Save (form post)</button>
+			</div>
+		</form>
+		<section class="output" id="output" hidden aria-labelledby="output-title">
+			<h2 id="output-title">Output (textarea value)</h2>
+			<pre tabindex="0" aria-labelledby="output-title"><code id="output-code"></code></pre>
+		</section>
+	</main>
+
+	<script src="../dist/blockfusion.js"></script>
+	<script>
+		const frameworks = {
+			fusioncss: { stylesheets: ['vendor/fusioncss.min.css', 'canvas.css'], bodyClass: 'demo-pad' },
+			bootstrap3: { stylesheets: ['vendor/bootstrap3.min.css', 'canvas.css'], bodyClass: 'container' },
+			bootstrap5: { stylesheets: ['vendor/bootstrap5.min.css', 'canvas.css'], bodyClass: 'container' },
+			foundation5: { stylesheets: ['vendor/foundation5.min.css', 'canvas.css'], bodyClass: 'demo-pad' },
+			foundation6: { stylesheets: ['vendor/foundation6.min.css', 'canvas.css'], bodyClass: 'grid-container' },
+			tailwind: { stylesheets: ['vendor/tailwind.min.css', 'canvas.css'], bodyClass: 'demo-plain' },
+			cssgrid: { stylesheets: ['canvas.css'], bodyClass: 'demo-plain' },
+		};
+
+		// A demo media provider: "uploads" become data URLs, pickers ask for nothing.
+		const demoMedia = {
+			upload: (file) =>
+				new Promise((resolve, reject) => {
+					const r = new FileReader();
+					r.onload = () => resolve({ src: r.result, alt: '' });
+					r.onerror = () => reject(r.error);
+					r.readAsDataURL(file);
+				}),
+		};
+
+		const select = document.getElementById('framework');
+		const saved = (() => { try { return localStorage.getItem('bf-demo-framework'); } catch { return null; } })();
+		if (saved && frameworks[saved]) select.value = saved;
+
+		const editor = BlockFusion.create(document.getElementById('content'), {
+			converter: select.value,
+			...frameworks[select.value],
+			media: demoMedia,
+			label: 'Page content',
+		});
+		window.editor = editor;
+
+		select.addEventListener('change', () => {
+			editor.setConverter(select.value, frameworks[select.value]);
+			try { localStorage.setItem('bf-demo-framework', select.value); } catch {}
+		});
+
+		const themeBtn = document.getElementById('theme');
+		const dark = () => document.documentElement.getAttribute('data-theme') === 'dark' ||
+			(!document.documentElement.hasAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches);
+		const syncThemeBtn = () => themeBtn.setAttribute('aria-pressed', String(dark()));
+		themeBtn.addEventListener('click', () => {
+			document.documentElement.setAttribute('data-theme', dark() ? 'light' : 'dark');
+			syncThemeBtn();
+		});
+		syncThemeBtn();
+
+		document.getElementById('media').addEventListener('change', (e) => editor.setMediaProvider(e.target.checked ? demoMedia : null));
+
+		const out = document.getElementById('output');
+		const code = document.getElementById('output-code');
+		const textarea = document.getElementById('content');
+		const showBtn = document.getElementById('show-output');
+		const refresh = () => { if (!out.hidden) code.textContent = textarea.value; };
+		showBtn.addEventListener('click', () => {
+			out.hidden = !out.hidden;
+			showBtn.setAttribute('aria-expanded', String(!out.hidden));
+			showBtn.textContent = out.hidden ? 'Show output' : 'Hide output';
+			editor.syncTextarea();
+			refresh();
+		});
+		editor.on('change', () => setTimeout(refresh, 150));
+		editor.on('converterchange', () => setTimeout(refresh, 150));
+
+		document.getElementById('page-form').addEventListener('submit', (e) => {
+			e.preventDefault();
+			const data = new FormData(e.target);
+			editor.announce(`Form would post ${data.get('content').length} characters`);
+			out.hidden = false;
+			showBtn.setAttribute('aria-expanded', 'true');
+			showBtn.textContent = 'Hide output';
+			code.textContent = data.get('content');
+		});
+	</script>
+</body>
+</html>
