@@ -7,10 +7,12 @@
  */
 export const CANVAS_CSS = `
 :root { --bf-c-accent: #0e7490; --bf-c-accent-ink: #ffffff; --bf-c-ring: #0e7490; --bf-c-muted: #475569; --bf-c-line: #7c8797; }
-.bf-root { position: relative; padding: 20px 0 8px; min-height: 120px; }
+/* The left gutter holds the row handles, clear of every column */
+.bf-root { position: relative; padding: 20px 0 8px 40px; min-height: 120px; }
 [data-bf-row] { position: relative; outline: 1px dashed transparent; outline-offset: 2px; }
 [data-bf-row]:hover, [data-bf-row].bf-active, [data-bf-row]:focus-within { outline-color: var(--bf-c-line); }
-[data-bf-col] { position: relative; }
+[data-bf-col] { position: relative; outline: 1px dashed transparent; outline-offset: -1px; }
+[data-bf-col]:hover, [data-bf-col].bf-active { outline-color: var(--bf-c-line); }
 [data-bf-col] > .bf-col-content { min-height: 1.6em; outline: none; border-radius: 2px; }
 [data-bf-col] > .bf-col-content:focus { box-shadow: 0 0 0 2px var(--bf-c-ring); }
 [data-bf-col] > .bf-col-content:empty::before { content: attr(data-placeholder); color: var(--bf-c-muted); }
@@ -26,10 +28,12 @@ export const CANVAS_CSS = `
 	font: 600 12px/1 system-ui, sans-serif;
 }
 .bf-handle svg { width: 16px; height: 16px; pointer-events: none; }
-.bf-row-handle { top: -16px; left: 0; }
+.bf-row-handle { top: 0; left: -38px; }
 .bf-col-handle { top: 2px; right: 2px; background: #ffffff; color: var(--bf-c-accent); box-shadow: 0 0 0 1px var(--bf-c-accent), 0 0 0 3px #ffffff; }
-[data-bf-row]:hover > .bf-row-handle, [data-bf-row].bf-active > .bf-row-handle,
-[data-bf-col]:hover > .bf-col-handle, [data-bf-col].bf-active > .bf-col-handle,
+/* Every column's handle shows while its row is hovered, focused or active */
+[data-bf-row]:hover > .bf-row-handle, [data-bf-row].bf-active > .bf-row-handle, [data-bf-row]:focus-within > .bf-row-handle,
+[data-bf-row]:hover > [data-bf-col] > .bf-col-handle, [data-bf-row].bf-active > [data-bf-col] > .bf-col-handle,
+[data-bf-row]:focus-within > [data-bf-col] > .bf-col-handle,
 .bf-handle:focus, .bf-handle[aria-expanded="true"] { opacity: 1; }
 .bf-handle:focus-visible { outline: 3px solid var(--bf-c-ring); outline-offset: 2px; box-shadow: 0 0 0 2px #ffffff; }
 @media (hover: none) { .bf-handle { opacity: 1; } }
