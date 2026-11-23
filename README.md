@@ -442,15 +442,16 @@ Invalid fields are marked with `aria-invalid` and `aria-errormessage`.
 - **Forced colours.** Pressed, focus and disabled states use system colours.
 - **Reduced motion.** Transitions are turned off.
 
-### Content checker
+### Contrast checker
 
-The "Check accessibility" toolbar button lists problems, each with a "Go to" button:
+The "Contrast checker" toolbar button lists problems, each with a "Go to" button:
 
+- text below WCAG AA contrast (4.5:1, or 3:1 for large text), measured on the rendered canvas so theme CSS and row and column backgrounds count; text over a background image or gradient is flagged to check by eye;
 - images without alt text (or with placeholder alt text);
 - skipped or empty heading levels;
 - links without text.
 
-The image dialog asks for alt text unless the image is marked decorative.
+It is a quick check, not a full accessibility audit. The image dialog asks for alt text unless the image is marked decorative.
 
 ### Keyboard shortcuts
 

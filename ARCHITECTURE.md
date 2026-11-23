@@ -95,7 +95,7 @@ Plugins can add toolbar items, commands, panels, block sources, a code editor fo
 - **Keyboard and screen readers.** Each row and column has a focusable handle with a menu, so moving, resizing, duplicating, deleting and changing settings never needs the mouse. Results are announced.
 - **Dialogs.** Link, image, block picker and raw HTML use labelled dialogs that trap focus and return it to where it came from.
 - **Theme and contrast.** Light and dark follow `prefers-color-scheme`, and the host can force either with `data-theme`. Colour tokens meet AA contrast. The editor respects reduced motion and works in forced-colours mode.
-- **Content checks.** An optional built-in checker warns about images without alt text and skipped heading levels.
+- **Contrast checker.** An optional built-in checker measures text contrast on the rendered canvas and also warns about images without alt text, skipped headings and empty links.
 
 ## API sketch
 

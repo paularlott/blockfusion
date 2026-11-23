@@ -79,7 +79,7 @@ export const checkerPlugin: Plugin = {
 	install(editor) {
 		editor.registerCommand({
 			id: 'check',
-			label: 'Check accessibility',
+			label: 'Contrast checker',
 			icon: 'audit',
 			run: async (ed) => {
 				const issues = checkContent(ed);
@@ -103,10 +103,10 @@ export const checkerPlugin: Plugin = {
 						),
 					);
 				}
-				const scope = h('p', { className: 'bf-hint' }, 'Checks text contrast, image alt text, headings and link text. Some things still need a person to judge, such as whether alt text is accurate.');
+				const scope = h('p', { className: 'bf-hint' }, 'Checks text contrast, plus missing image alt text, heading levels and empty links. It isn’t a full accessibility audit.');
 				const body = issues.length ? [list, scope] : [h('p', {}, 'No problems found.'), scope];
 				const p = openDialog(ed.root, {
-					title: issues.length ? `${issues.length} possible problem${issues.length > 1 ? 's' : ''}` : 'Content check',
+					title: issues.length ? `${issues.length} possible problem${issues.length > 1 ? 's' : ''}` : 'Contrast checker',
 					body,
 					submitLabel: null,
 					onReady: (fn) => (close = fn),
