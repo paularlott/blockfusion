@@ -220,3 +220,33 @@ describe('loading foreign and unknown markup', () => {
 		expect(f6.toNeutral(['show-for-medium-only', 'x'])).toEqual(['hidden-xs', 'hidden-md', 'hidden-lg', 'x']);
 	});
 });
+
+describe('custom converters', () => {
+	it('a converter built with createGridConverter round-trips and cross-converts', async () => {
+		const { createGridConverter, spanParser } = await import('../src/converters/grid');
+		const { registerConverter } = await import('../src/converters/registry');
+		const mine = createGridConverter({
+			id: 'mygrid',
+			name: 'My grid',
+			row: { tokens: ['grid-row'] },
+			col: {
+				tokens: ['grid-col'],
+				spanClass: (bp, n) => `w-${bp}-${n}`,
+				parseSpan: spanParser(/^w-(base|sm|md|lg)-(\d+)$/, { base: 'base', sm: 'sm', md: 'md', lg: 'lg' }),
+				base12Implicit: true,
+			},
+			utilities: {
+				buttons: [
+					[['button', 'primary'], ['btn', 'btn-light']],
+					[['button', 'accent'], ['btn', 'btn-brand']],
+				],
+				visibility: { kind: 'classes', hidden: { xs: 'hide-xs', sm: 'hide-sm', md: 'hide-md', lg: 'hide-lg' } },
+			},
+		});
+		registerConverter(mine);
+		const html = mine.render(sample());
+		expect(withoutIds(parseWith(mine, html))).toEqual(withoutIds(sample()));
+		expect(withoutIds(loadHTML(convertHTML(html, 'bootstrap5')))).toEqual(withoutIds(sample()));
+		expect(detectConverter(html)?.id).toBe('mygrid');
+	});
+});
