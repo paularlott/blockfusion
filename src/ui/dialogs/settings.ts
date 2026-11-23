@@ -68,12 +68,12 @@ export async function settingsDialog(editor: Editor, kind: 'row' | 'col', id: st
 		tag.append(h('option', { value: t, selected: (attrs.tag ?? 'div') === t }, `<${t}>`));
 	}
 	const bgColor = input({ value: style.color, autocomplete: 'off' });
-	const picker = h('input', { type: 'color', className: 'bf-color', 'aria-label': 'Pick background colour', value: /^#[0-9a-f]{6}$/i.test(style.color) ? style.color : '#ffffff' });
+	const picker = h('input', { type: 'color', className: 'bf-color', 'aria-label': 'Pick background colour', value: toHexColor(style.color) ?? '#ffffff' });
 	picker.addEventListener('input', () => (bgColor.value = picker.value));
 	// Keep the picker in step with a typed hex colour
 	bgColor.addEventListener('input', () => {
-		const v = bgColor.value.trim();
-		if (/^#[0-9a-f]{6}$/i.test(v)) picker.value = v;
+		const hex = toHexColor(bgColor.value);
+		if (hex) picker.value = hex;
 	});
 	const bgImage = input({ value: style.image, inputmode: 'url' });
 	const rest = input({ value: style.rest, autocomplete: 'off', spellcheck: 'false' });
@@ -163,4 +163,32 @@ function colorField(text: HTMLInputElement, picker: HTMLInputElement): HTMLEleme
 	text.replaceWith(line);
 	line.append(text, picker);
 	return f;
+}
+
+let colorCtx: CanvasRenderingContext2D | null | undefined;
+
+/**
+ * Any CSS colour (#rgb, rgb(), hsl(), a name, ...) as #rrggbb for the colour
+ * picker, or null when it isn't a colour. The browser does the parsing: a
+ * canvas context reports a valid fillStyle back in hex. Alpha is dropped, as
+ * the picker can't show it.
+ */
+export function toHexColor(value: string): string | null {
+	const v = value.trim();
+	if (v === '') return null;
+	if (/^#[0-9a-f]{6}$/i.test(v)) return v.toLowerCase();
+	if (colorCtx === undefined) colorCtx = document.createElement('canvas').getContext('2d');
+	if (!colorCtx) return null;
+	// Set two different sentinels first: an invalid value leaves each unchanged
+	colorCtx.fillStyle = '#000000';
+	colorCtx.fillStyle = v;
+	const a = String(colorCtx.fillStyle);
+	colorCtx.fillStyle = '#ffffff';
+	colorCtx.fillStyle = v;
+	const b = String(colorCtx.fillStyle);
+	if (a !== b) return null;
+	if (/^#[0-9a-f]{6}$/i.test(a)) return a.toLowerCase();
+	// Translucent colours come back as rgba(): keep the colour, drop the alpha
+	const m = a.match(/^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i);
+	return m ? '#' + [m[1], m[2], m[3]].map((n) => Number(n).toString(16).padStart(2, '0')).join('') : null;
 }
