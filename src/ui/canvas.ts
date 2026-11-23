@@ -366,6 +366,59 @@ export class Canvas {
 		return true;
 	}
 
+	/**
+	 * Select an element inside a column (its text, or the element itself when
+	 * it has none, such as an image), scroll it into view and outline it
+	 * briefly so it is easy to spot.
+	 */
+	focusElement(colId: string, target: Element): boolean {
+		const content = this.content(colId);
+		if (!content || !content.contains(target)) return this.focusCol(colId, true);
+		content.focus({ preventScroll: true });
+		const r = this.doc.createRange();
+		if (target.textContent?.trim()) r.selectNodeContents(target);
+		else r.selectNode(target);
+		const sel = this.doc.getSelection()!;
+		sel.removeAllRanges();
+		sel.addRange(r);
+		this.savedRange = r.cloneRange();
+		target.scrollIntoView({ block: 'center' });
+		this.flash(target);
+		return true;
+	}
+
+	private flashEl: HTMLElement | null = null;
+	private flashTimer = 0;
+
+	/** Outline an element for a moment, using an overlay outside the content. */
+	private flash(target: Element): void {
+		const win = this.doc.defaultView!;
+		this.flashEl?.remove();
+		win.clearTimeout(this.flashTimer);
+		const box = target.getBoundingClientRect();
+		// Absolute positions are relative to the body when the site positions it
+		let ox = win.scrollX;
+		let oy = win.scrollY;
+		if (win.getComputedStyle(this.doc.body).position !== 'static') {
+			const b = this.doc.body.getBoundingClientRect();
+			ox = -b.left + this.doc.body.clientLeft;
+			oy = -b.top + this.doc.body.clientTop;
+		}
+		const el = this.doc.createElement('div');
+		el.className = 'bf-flash';
+		el.setAttribute('aria-hidden', 'true');
+		el.style.cssText = `top:${box.top + oy - 4}px;left:${box.left + ox - 4}px;width:${box.width + 8}px;height:${box.height + 8}px`;
+		this.doc.body.append(el);
+		this.flashEl = el;
+		const clear = () => {
+			el.remove();
+			if (this.flashEl === el) this.flashEl = null;
+		};
+		this.flashTimer = win.setTimeout(clear, 2500);
+		this.doc.addEventListener('keydown', clear, { once: true });
+		this.doc.addEventListener('pointerdown', clear, { once: true });
+	}
+
 	focusHandle(kind: 'row' | 'col', id: string): boolean {
 		const el = this.handleEl(kind, id);
 		if (!el) return false;

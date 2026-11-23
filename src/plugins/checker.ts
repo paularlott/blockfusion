@@ -16,6 +16,8 @@ export interface ContentIssue {
 	message: string;
 	rowId: string;
 	colId: string;
+	/** The element in the canvas, when it can be pinned down. */
+	el?: Element;
 }
 
 export function checkContent(editor: Editor): ContentIssue[] {
@@ -25,22 +27,23 @@ export function checkContent(editor: Editor): ContentIssue[] {
 		row.cols.forEach((col, ci) => {
 			if (col.kind !== 'rich') return;
 			const where = `row ${ri + 1}, column ${ci + 1}`;
-			const root = fragment(col.html);
-			const add = (message: string) => issues.push({ message: `${message} (${where})`, rowId: row.id, colId: col.id });
+			// Check the live canvas when it is there, so Go to can find the element
+			const live = editor.canvas.content(col.id);
+			const root = live ?? fragment(col.html);
+			const add = (message: string, el?: Element) => issues.push({ message: `${message} (${where})`, rowId: row.id, colId: col.id, el: live ? el : undefined });
 			for (const img of Array.from(root.querySelectorAll('img'))) {
-				if (!img.hasAttribute('alt')) add('Image has no alt text');
-				else if (/^(image|photo|picture|img|describe)/i.test(img.alt.trim())) add(`Image alt text "${img.alt}" may not describe the image`);
+				if (!img.hasAttribute('alt')) add('Image has no alt text', img);
+				else if (/^(image|photo|picture|img|describe)/i.test(img.alt.trim())) add(`Image alt text "${img.alt}" may not describe the image`, img);
 			}
 			for (const el of Array.from(root.querySelectorAll('h1,h2,h3,h4,h5,h6'))) {
 				const level = Number(el.tagName[1]);
-				if (!el.textContent?.trim()) add(`Empty heading level ${level}`);
-				if (last && level > last + 1) add(`Heading level ${level} skips from level ${last}`);
+				if (!el.textContent?.trim()) add(`Empty heading level ${level}`, el);
+				if (last && level > last + 1) add(`Heading level ${level} skips from level ${last}`, el);
 				last = level;
 			}
 			for (const a of Array.from(root.querySelectorAll('a'))) {
-				if (!a.textContent?.trim() && !a.querySelector('img[alt]:not([alt=""])')) add('Link has no text');
+				if (!a.textContent?.trim() && !a.querySelector('img[alt]:not([alt=""])')) add('Link has no text', a);
 			}
-			const live = editor.canvas.content(col.id);
 			if (live) checkContrast(live, add);
 		});
 	});
@@ -48,10 +51,10 @@ export function checkContent(editor: Editor): ContentIssue[] {
 }
 
 /** One issue per distinct failing colour pairing in a column, quoting the first text. */
-function checkContrast(content: HTMLElement, add: (message: string) => void): void {
+function checkContrast(content: HTMLElement, add: (message: string, el?: Element) => void): void {
 	const seen = new Set<Element>();
 	const reported = new Set<string>();
-	let unknown = false;
+	let unknown: Element | undefined;
 	const walker = content.ownerDocument.createTreeWalker(content, NodeFilter.SHOW_TEXT);
 	for (let n = walker.nextNode(); n; n = walker.nextNode()) {
 		const el = n.parentElement;
@@ -60,7 +63,7 @@ function checkContrast(content: HTMLElement, add: (message: string) => void): vo
 		if (!el.getClientRects().length) continue;
 		const res = textContrast(el);
 		if (!res) {
-			unknown = true;
+			unknown ??= el;
 			continue;
 		}
 		if (res.ratio >= res.required) continue;
@@ -69,9 +72,9 @@ function checkContrast(content: HTMLElement, add: (message: string) => void): vo
 		reported.add(key);
 		const sample = n.textContent.trim().replace(/\s+/g, ' ');
 		const quote = sample.length > 30 ? sample.slice(0, 30) + '…' : sample;
-		add(`Low contrast text "${quote}": ${formatRatio(res.ratio)}, needs ${res.required}:1`);
+		add(`Low contrast text "${quote}": ${formatRatio(res.ratio)}, needs ${res.required}:1`, el);
 	}
-	if (unknown) add('Text over a background image or gradient: check its contrast by eye');
+	if (unknown) add('Text over a background image or gradient: check its contrast by eye', unknown);
 }
 
 export const checkerPlugin: Plugin = {
@@ -96,7 +99,7 @@ export const checkerPlugin: Plugin = {
 								type: 'button',
 								className: 'bf-btn',
 								onclick: () => {
-									go = () => ed.canvas.focusCol(issue.colId);
+									go = () => (issue.el ? ed.canvas.focusElement(issue.colId, issue.el) : ed.canvas.focusCol(issue.colId));
 									close?.(false);
 								},
 							}, 'Go to'),

@@ -70,6 +70,9 @@ export const CANVAS_CSS = `
 .bf-empty { text-align: center; color: var(--bf-c-muted); font: 15px/1.5 system-ui, sans-serif; margin: 24px 0 0; }
 .bf-drop-target { box-shadow: inset 0 0 0 3px var(--bf-c-ring) !important; }
 img.bf-selected { outline: 3px solid var(--bf-c-ring); outline-offset: 2px; }
+/* "Go to" from the checker: a ring around the element, dark and light so it shows on any background. */
+.bf-flash { position: absolute !important; z-index: 2147483000; pointer-events: none; box-sizing: border-box; border: 3px solid #b45309; border-radius: 4px; box-shadow: 0 0 0 2px #fff, inset 0 0 0 2px #fff; animation: bf-flash 2.5s ease-out forwards; }
+@keyframes bf-flash { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
 
 @media (forced-colors: active) {
 	.bf-handle, .bf-cbtn { forced-color-adjust: none; background: ButtonFace; color: ButtonText; border: 1px solid ButtonText; opacity: 1; }
@@ -77,6 +80,7 @@ img.bf-selected { outline: 3px solid var(--bf-c-ring); outline-offset: 2px; }
 	.bf-cbtn[aria-pressed="true"] { background: Highlight; color: HighlightText; }
 	[data-bf-row]:hover, [data-bf-row].bf-active { outline-color: CanvasText; }
 	.bf-raw-box { border-color: CanvasText; }
+	.bf-flash { forced-color-adjust: none; border-color: Highlight; box-shadow: none; }
 }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } .bf-flash { animation: none; } }
 `;
