@@ -188,8 +188,6 @@ export const structurePlugin: Plugin = {
 					ref.col.kind = 'raw';
 				}, { focus: { kind: 'col-handle', id: r.colId! } }),
 		});
-		colAct({ id: 'col-above', label: 'Insert row above…', run: (ed, r) => addRowFlow(ed, { at: 'before', rowId: r.rowId }, 'Insert row above') });
-		colAct({ id: 'col-below', label: 'Insert row below…', run: (ed, r) => addRowFlow(ed, { at: 'after', rowId: r.rowId }, 'Insert row below') });
 		colAct({ id: 'col-settings', label: 'Column settings…', run: (ed, r) => settingsDialog(ed, 'col', r.colId!) });
 		colAct({ id: '---4', label: '', run: () => {} });
 		colAct({ id: 'col-delete', label: 'Delete column', shortcut: 'Delete', danger: true, run: (ed, r) => deleteColCmd(ed, r.colId!) });

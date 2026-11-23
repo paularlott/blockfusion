@@ -45,13 +45,15 @@ export function exec(editor: Editor, label: string, cmd: string, value?: string)
  * (Chrome), obsolete <strike>, and empty style attributes.
  */
 /**
- * Browsers' bold and italic commands write <b> and <i>; store the semantic
- * <strong> and <em>. Elements with a class are left alone, as <i> is often
- * an icon (<i class="fa fa-star">).
+ * Browsers' bold, italic and underline commands write <b>, <i> and <u>.
+ * Store <strong> and <em>, and underline as a styled span, since <u> means
+ * an annotation (such as a misspelling) rather than decoration. Elements
+ * with a class are left alone: <i> is often an icon (<i class="fa fa-star">)
+ * and a classed <u> is likely a deliberate annotation.
  */
 export function semanticInline(root: HTMLElement): void {
-	const map: Record<string, string> = { B: 'strong', I: 'em' };
-	const found = Array.from(root.querySelectorAll('b:not([class]), i:not([class])'));
+	const map: Record<string, string> = { B: 'strong', I: 'em', U: 'span' };
+	const found = Array.from(root.querySelectorAll('b:not([class]), i:not([class]), u:not([class])'));
 	if (!found.length) return;
 	// Keep the selection: children move across unchanged, so a boundary on a
 	// replaced element maps to the same offset in its replacement.
@@ -62,6 +64,10 @@ export function semanticInline(root: HTMLElement): void {
 	for (const el of found) {
 		const out = root.ownerDocument.createElement(map[el.tagName]);
 		for (const a of Array.from(el.attributes)) out.setAttribute(a.name, a.value);
+		if (el.tagName === 'U') {
+			const deco = out.style.textDecorationLine;
+			if (!/underline/.test(deco)) out.style.textDecorationLine = deco && deco !== 'none' ? deco + ' underline' : 'underline';
+		}
 		while (el.firstChild) out.appendChild(el.firstChild);
 		el.replaceWith(out);
 		swapped.set(el, out);
