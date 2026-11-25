@@ -315,6 +315,8 @@ A block is one or more rows of columns, described as data rather than markup, so
 - Ids and kinds are optional. `category`, `description` and `thumbnail` are optional too; without a thumbnail, a schematic preview is drawn.
 - `rows` may also be a string of HTML in any known framework. It is detected and converted on insert, which is handy for pasting existing markup, but the JSON form is the one to write by hand.
 
+In the Blocks panel, drag a block onto the page: a line shows where it will go, above or below the row under the pointer. Clicking a block (or pressing Enter on it) inserts it where the panel's **Insert** choice says: below or above the current row, at the top, or at the end.
+
 There are three ways to supply blocks:
 
 - the `blocks` option, as an array;

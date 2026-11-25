@@ -97,7 +97,11 @@ export class Canvas {
 		d.addEventListener('click', (e) => ed.onCanvasClick(e));
 		d.addEventListener('paste', (e) => ed.onCanvasPaste(e));
 		d.addEventListener('dragover', (e) => ed.onCanvasDragOver(e));
-		d.addEventListener('dragleave', (e) => (e.target as HTMLElement).closest?.('.bf-drop-target')?.classList.remove('bf-drop-target'));
+		d.addEventListener('dragleave', (e) => {
+			(e.target as HTMLElement).closest?.('.bf-drop-target')?.classList.remove('bf-drop-target');
+			// Leaving the canvas altogether (relatedTarget is outside it)
+			if (!e.relatedTarget) this.hideDropLine();
+		});
 		d.addEventListener('drop', (e) => ed.onCanvasDrop(e));
 		d.addEventListener('pointerdown', () => ed.onCanvasPointerDown());
 		this.applyTheme();
@@ -469,20 +473,24 @@ export class Canvas {
 	private flashEl: HTMLElement | null = null;
 	private flashTimer = 0;
 
+	/**
+	 * What to add to a viewport position to place an absolute overlay in the
+	 * body: the scroll, or the body's own offset when the site positions it.
+	 */
+	private overlayOffset(): { ox: number; oy: number } {
+		const win = this.doc.defaultView!;
+		if (win.getComputedStyle(this.doc.body).position === 'static') return { ox: win.scrollX, oy: win.scrollY };
+		const b = this.doc.body.getBoundingClientRect();
+		return { ox: -b.left + this.doc.body.clientLeft, oy: -b.top + this.doc.body.clientTop };
+	}
+
 	/** Outline an element for a moment, using an overlay outside the content. */
 	private flash(target: Element): void {
 		const win = this.doc.defaultView!;
 		this.flashEl?.remove();
 		win.clearTimeout(this.flashTimer);
 		const box = target.getBoundingClientRect();
-		// Absolute positions are relative to the body when the site positions it
-		let ox = win.scrollX;
-		let oy = win.scrollY;
-		if (win.getComputedStyle(this.doc.body).position !== 'static') {
-			const b = this.doc.body.getBoundingClientRect();
-			ox = -b.left + this.doc.body.clientLeft;
-			oy = -b.top + this.doc.body.clientTop;
-		}
+		const { ox, oy } = this.overlayOffset();
 		const el = this.doc.createElement('div');
 		el.className = 'bf-flash';
 		el.setAttribute('aria-hidden', 'true');
@@ -496,6 +504,52 @@ export class Canvas {
 		this.flashTimer = win.setTimeout(clear, 2500);
 		this.doc.addEventListener('keydown', clear, { once: true });
 		this.doc.addEventListener('pointerdown', clear, { once: true });
+	}
+
+	/* ------------------------------------------------------ block drops */
+
+	private dropLine: HTMLElement | null = null;
+
+	/**
+	 * Where a block dropped at viewport y (canvas coordinates) goes: before
+	 * the row under the pointer when in its top half, otherwise after it.
+	 * Below the last row, or on the empty canvas, it goes at the end.
+	 */
+	dropIndexAt(y: number): number {
+		const rows = Array.from(this.root.querySelectorAll<HTMLElement>(':scope > [data-bf-row]'));
+		for (let i = 0; i < rows.length; i++) {
+			const r = rows[i].getBoundingClientRect();
+			if (y < r.top + r.height / 2) return i;
+		}
+		return rows.length;
+	}
+
+	/** A line between rows showing where a dragged block will go. */
+	showDropLine(index: number): void {
+		if (!this.doc) return;
+		const rows = Array.from(this.root.querySelectorAll<HTMLElement>(':scope > [data-bf-row]'));
+		const { ox, oy } = this.overlayOffset();
+		let y: number;
+		if (!rows.length) y = this.root.getBoundingClientRect().top + 12;
+		else if (index < rows.length) {
+			const r = rows[index].getBoundingClientRect();
+			const prev = index > 0 ? rows[index - 1].getBoundingClientRect().bottom : r.top - 8;
+			y = (prev + r.top) / 2;
+		} else y = rows[rows.length - 1].getBoundingClientRect().bottom + 4;
+		const box = this.root.getBoundingClientRect();
+		if (!this.dropLine) {
+			this.dropLine = this.doc.createElement('div');
+			this.dropLine.className = 'bf-drop-line';
+			this.dropLine.setAttribute('aria-hidden', 'true');
+			this.doc.body.append(this.dropLine);
+		}
+		const left = box.left + 40;
+		this.dropLine.style.cssText = `top:${y + oy - 2}px;left:${left + ox}px;width:${box.right - left}px`;
+	}
+
+	hideDropLine(): void {
+		this.dropLine?.remove();
+		this.dropLine = null;
 	}
 
 	focusHandle(kind: 'row' | 'col', id: string): boolean {

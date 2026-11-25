@@ -726,18 +726,20 @@ export class Editor {
 
 	/** Insert rows (e.g. a block) after the active row, or at the end. */
 	insertRowsAfterActive(rows: Row[], label: string): boolean {
-		const fresh = rows.map((r) => reId(clone(r)));
-		return this.apply(
-			label,
-			(d) => {
-				const i = this.activeRow ? d.rows.findIndex((r) => r.id === this.activeRow) : -1;
-				insertRows(d, fresh, i >= 0 ? i + 1 : d.rows.length);
-			},
-			{
-				announce: (d) => `${label}: row ${d.rows.findIndex((r) => r.id === fresh[0].id) + 1} of ${d.rows.length}`,
-			},
-		) && (this.canvas.rowEl(fresh[0].id)?.scrollIntoView({ block: 'nearest' }), true);
+		const i = this.activeRow ? this.doc.rows.findIndex((r) => r.id === this.activeRow) : -1;
+		return this.insertRowsAt(rows, i >= 0 ? i + 1 : this.doc.rows.length, label);
 	}
+
+	/** Insert rows at a row index (0 is the top, rows.length the end). */
+	insertRowsAt(rows: Row[], index: number, label: string): boolean {
+		const fresh = rows.map((r) => reId(clone(r)));
+		return this.apply(label, (d) => insertRows(d, fresh, index), {
+			announce: (d) => `${label}: row ${d.rows.findIndex((r) => r.id === fresh[0].id) + 1} of ${d.rows.length}`,
+		}) && (this.canvas.rowEl(fresh[0].id)?.scrollIntoView({ block: 'nearest' }), true);
+	}
+
+	/** The block being dragged from the block panel, if any. */
+	draggedBlock: Block | null = null;
 
 	/** Neutral rows for a block. HTML blocks are detected and converted. */
 	blockRows(block: Block): Row[] {
@@ -869,6 +871,14 @@ export class Editor {
 
 	onCanvasDragOver(e: DragEvent): void {
 		const types = Array.from(e.dataTransfer?.types ?? []);
+		// draggedBlock is set only while a drag from the block panel is under way
+		if (this.draggedBlock) {
+			// A block from the panel: show where it would land between rows
+			e.preventDefault();
+			e.dataTransfer!.dropEffect = 'copy';
+			this.canvas.showDropLine(this.canvas.dropIndexAt(e.clientY));
+			return;
+		}
 		if (!types.includes('Files')) return;
 		const content = (e.target as HTMLElement).closest?.('[data-bf-content]');
 		if (!content) return;
@@ -878,6 +888,16 @@ export class Editor {
 	}
 
 	onCanvasDrop(e: DragEvent): void {
+		const block = this.draggedBlock;
+		if (block) {
+			e.preventDefault();
+			const index = this.canvas.dropIndexAt(e.clientY);
+			this.canvas.hideDropLine();
+			this.draggedBlock = null;
+			const rows = this.blockRows(block);
+			if (rows.length) this.insertRowsAt(rows, index, `Insert block ${block.name}`);
+			return;
+		}
 		const content = (e.target as HTMLElement).closest?.('[data-bf-content]') as HTMLElement | null;
 		content?.classList.remove('bf-drop-target');
 		const files = Array.from(e.dataTransfer?.files ?? []).filter((f) => f.type.startsWith('image/'));
@@ -987,6 +1007,9 @@ export class Editor {
 		this.exec('editRaw', { rowId, colId });
 	}
 }
+
+/** The drag data type of a block dragged from the block panel. */
+export const BLOCK_DRAG_TYPE = 'application/x-blockfusion-block';
 
 /** Handle-key matching: like shortcuts, but "Alt+ArrowUp" style names use e.key. */
 function matchKey(shortcut: string, e: KeyboardEvent): boolean {

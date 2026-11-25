@@ -421,6 +421,13 @@
 	border-color: var(--bf-primary);
 	background: var(--bf-surface-2);
 }
+.bf-block[draggable='true'] {
+	cursor: grab;
+}
+.bf-block.bf-dragging {
+	opacity: 0.6;
+	cursor: grabbing;
+}
 .bf-block-name {
 	font-weight: 650;
 }
