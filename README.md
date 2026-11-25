@@ -24,6 +24,8 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the design.
 - [Accessibility](#accessibility)
 - [Development](#development)
 - [Known limitations](#known-limitations)
+- [Contributing](#contributing)
+- [Licence](#licence)
 
 ## Quick start
 
@@ -573,3 +575,11 @@ src/
 - **Bootstrap and Foundation breakpoint names.** These map by name, not by pixel width; for example, Bootstrap 5's `md` is 768px while fusionCSS's `m` is 992px.
 - **Tailwind's default gap.** A row whose own class is exactly the default gap (`gap-6`) loses that class on a round trip, since the converter adds it anyway.
 - **Comments inside rows.** A row containing HTML comments (other than raw markers) is kept as wrapped markup rather than editable columns, so the comments aren't lost.
+
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). Pull requests need the shared [Contributor License Agreement](CONTRIBUTOR_LICENSE_AGREEMENT.md), signed once for every project under [github.com/paularlott](https://github.com/paularlott); a GitHub check confirms it on each pull request. Please follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## Licence
+
+BlockFusion is released under the [MIT License](LICENSE.txt). Copyright (c) 2026 Paul Arlott.

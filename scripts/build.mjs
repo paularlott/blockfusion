@@ -12,7 +12,8 @@ import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 
 const watch = process.argv.includes('--watch');
-const banner = { js: '/*! BlockFusion | MIT licence */', css: '/*! BlockFusion | MIT licence */' };
+const notice = '/*! BlockFusion | Copyright (c) 2026 Paul Arlott | MIT License */';
+const banner = { js: notice, css: notice };
 const common = { bundle: true, minify: true, target: ['es2020', 'chrome100', 'firefox100', 'safari15'], banner, logLevel: 'info' };
 
 const configs = [

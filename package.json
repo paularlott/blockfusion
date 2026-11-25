@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "A dependency-free WYSIWYG page-content editor built on rows, columns and blocks.",
   "license": "MIT",
+  "author": "Paul Arlott",
   "type": "module",
   "main": "dist/blockfusion.js",
   "module": "dist/blockfusion.mjs",
@@ -11,7 +12,8 @@
     "dist",
     "src",
     "README.md",
-    "ARCHITECTURE.md"
+    "ARCHITECTURE.md",
+    "LICENSE.txt"
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
