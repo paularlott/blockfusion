@@ -18,9 +18,17 @@ export const CANVAS_CSS = `
 [data-bf-row]:hover, [data-bf-row].bf-active, [data-bf-row]:focus-within { outline-color: var(--bf-c-line); }
 [data-bf-col] { position: relative !important; outline: 1px dashed transparent; outline-offset: -1px; }
 [data-bf-col]:hover, [data-bf-col].bf-active { outline-color: var(--bf-c-line); }
-[data-bf-col] > .bf-col-content { min-height: 1.6em; outline: none; border-radius: 2px; }
-[data-bf-col] > .bf-col-content:focus { box-shadow: 0 0 0 2px var(--bf-c-ring); }
-[data-bf-col] > .bf-col-content:empty::before { content: attr(data-placeholder); color: var(--bf-c-muted); }
+[data-bf-col] > .bf-col-content { position: relative; min-height: 1.6em; outline: 1px dotted transparent; outline-offset: 1px; border-radius: 2px; }
+/* The typing area shows on hover; the column's empty space also takes clicks (see Editor.onCanvasPointerDown) */
+[data-bf-col]:hover > .bf-col-content { outline-color: var(--bf-c-line); }
+[data-bf-col] > .bf-col-content:focus { outline-color: transparent; box-shadow: 0 0 0 2px var(--bf-c-ring); }
+/* An empty column (no content, or the single empty paragraph a new one gets): a taller, outlined area with a prompt */
+[data-bf-col] > .bf-col-content:is(:empty, :has(> p:only-child > br:only-child)) { min-height: 5em; outline: 1px dashed var(--bf-c-line); }
+[data-bf-col] > .bf-col-content:is(:empty, :has(> p:only-child > br:only-child))::before {
+	content: attr(data-placeholder); position: absolute; inset: 0.5em auto auto 0.5em; pointer-events: none;
+	color: var(--bf-c-muted); font: italic 15px/1.4 system-ui, sans-serif;
+}
+[data-bf-col] > .bf-col-content:is(:empty, :has(> p:only-child > br:only-child)):focus::before { content: none; }
 
 /* Handles: 28px targets, shown on hover, focus and for the active row; always on touch screens. */
 .bf-handle {
@@ -80,6 +88,7 @@ img.bf-selected { outline: 3px solid var(--bf-c-ring); outline-offset: 2px; }
 	.bf-handle:focus-visible, .bf-cbtn:focus-visible, [data-bf-col] > .bf-col-content:focus { outline: 3px solid Highlight; }
 	.bf-cbtn[aria-pressed="true"] { background: Highlight; color: HighlightText; }
 	[data-bf-row]:hover, [data-bf-row].bf-active { outline-color: CanvasText; }
+	[data-bf-col] > .bf-col-content:is(:empty, :has(> p:only-child > br:only-child)) { outline-color: CanvasText; }
 	.bf-raw-box { border-color: CanvasText; }
 	.bf-flash { forced-color-adjust: none; border-color: Highlight; box-shadow: none; }
 	.bf-drop-line { forced-color-adjust: none; background: Highlight; box-shadow: none; }

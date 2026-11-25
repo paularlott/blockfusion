@@ -72,6 +72,7 @@ Normal form posts therefore just work. On any other element, its current HTML be
 - **Rows and columns.**
   - Add a row with a layout picker: 1, 1/2+1/2, 1/3×3, 1/4×4, 2/3+1/3, 1/3+2/3, 3/4+1/4, 1/4+3/4, or a wide centre with narrow sides (1/4+1/2+1/4). Columns can be added, removed and resized afterwards, and exact spans set in column settings.
   - Add, remove, move, resize, duplicate and delete rows and columns.
+  - Clicking anywhere in a column, including the space below its text, puts the cursor at the end of its text. An empty column shows an outlined typing area with a "Type here…" prompt.
   - Row and column settings: class, id, element, background, inline style, custom attributes, and spans per breakpoint.
 - **Blocks.** A library panel with search and categories. A block is one or more rows, given as neutral rows or as HTML for any known framework. Inserting a block converts it to the active framework.
 - **Rich text.**

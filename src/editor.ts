@@ -857,7 +857,32 @@ export class Editor {
 		// so "after the current row" means the row that was clicked. Text
 		// columns select themselves when they take focus.
 		const t = e.target as HTMLElement;
+		if (this.typeInEmptySpace(e, t)) return;
 		if (t.closest?.('[data-bf-row]') && !t.closest('[data-bf-content]')) this.onCanvasFocus(t);
+	}
+
+	/**
+	 * A click on the empty part of a column (below its text, or beside a short
+	 * column in grids where columns don't stretch) puts the caret at the end
+	 * of that column's text, so the whole column is a place to type.
+	 */
+	private typeInEmptySpace(e: PointerEvent, t: HTMLElement): boolean {
+		if (e.button !== 0) return false;
+		let col: HTMLElement | null = null;
+		if (t.matches?.('[data-bf-col]')) col = t;
+		else if (t.matches?.('[data-bf-row]')) {
+			// The row itself was hit: take the column under the pointer
+			col = Array.from(t.querySelectorAll<HTMLElement>(':scope > [data-bf-col]')).find((c) => {
+				const r = c.getBoundingClientRect();
+				return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top;
+			}) ?? null;
+		}
+		const colId = col?.getAttribute('data-bf-col');
+		if (!colId || !this.canvas.content(colId)) return false;
+		e.preventDefault();
+		this.canvas.focusCol(colId);
+		this.onCanvasFocus(this.canvas.content(colId)!);
+		return true;
 	}
 
 	onCanvasPaste(e: ClipboardEvent): void {
