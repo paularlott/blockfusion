@@ -19,6 +19,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the design.
 - [API](#api)
 - [Converters](#converters)
 - [Blocks](#blocks)
+- [Dictation](#dictation)
 - [Media provider](#media-provider)
 - [Plugins](#plugins)
 - [Accessibility](#accessibility)
@@ -128,7 +129,7 @@ The default toolbar ids are:
 
 ```
 undo redo | block font size | bold italic underline strike subscript superscript color clear |
-ul ol outdent indent quote | alignLeft alignCenter alignRight alignJustify | link image | blocks addRow addRaw width colorMode |
+ul ol outdent indent quote | alignLeft alignCenter alignRight alignJustify | link image dictate | blocks addRow addRaw width colorMode |
 source check help
 
 `colorMode` only appears when the editor knows how the site switches light and dark.
@@ -150,6 +151,8 @@ editor.undo(); editor.redo();
 editor.exec('bold');                    // run any command by id
 editor.focus();
 editor.announce('Saved');               // screen reader live region
+editor.notify('Saved', 'info');         // a toast under the toolbar (also announced); goes by itself
+editor.clearNotices();                  // remove toasts (all, or those with a key)
 editor.ready.then(() => {});            // canvas loaded
 editor.destroy();                       // restores the textarea (or writes the HTML back into the element)
 
@@ -346,6 +349,48 @@ The 14 built-in blocks are:
 - pricing
 - team
 - contact details
+
+## Dictation
+
+Dictation is off by default; turn it on with `dictation: true` (the browser's speech recognition) or a provider of your own (below). The **Dictate** button (microphone, Mod+Alt+V) then turns speech into text in the column being edited. Put the cursor in a text column, or select text to replace, and press it. Words appear in grey as they are heard and settle into the text; press Dictate again, or Escape, to stop. Spoken commands are listed below, and in the editor's keyboard help (Mod+/). Dictated text is ordinary typing: it can be undone, and the grey words never reach the saved content.
+
+### Spoken commands
+
+| Say | Does |
+| --- | --- |
+| "new line" | A line break within the paragraph. |
+| "new paragraph" | Starts a new paragraph. |
+| "delete last", or "scratch that" | Removes the last thing dictated: a phrase (Chrome, Safari), a sentence (Edge, which sends several at once) or a line or paragraph break. Say it again to keep going back. Text edited since it was dictated is left alone. |
+
+- Commands are English, and they're acted on wherever the words come up, with no pause needed: "a new line of products" becomes "a", a line break, then "of products". To get those words into the text, type them.
+- A full stop a punctuating service adds after a command ("New line.") is dropped.
+- Punctuation is otherwise up to the browser: Edge adds it, Chrome and Safari mostly don't.
+- Stop with the Dictate button or Escape. Everything dictated in one go is one undo step.
+
+### Speech recognition
+
+By default it uses the browser's speech recognition (the Web Speech API):
+
+- Chrome and Edge send the audio to their speech service (Google, Microsoft); Safari uses Apple's. Firefox doesn't support it, so the button isn't shown there. Support varies by platform (Edge on macOS has been unreliable); when recognition fails or stops at once, a message under the toolbar says so.
+- The page must be served over HTTPS, or from `localhost` while developing (`http://` on an IP address or other host name doesn't count), and the browser asks for microphone access the first time.
+- Chrome needs to reach Google's speech service. Chromium browsers without one (Brave, and Edge on macOS) fail with a network error; Chrome and Safari work.
+
+A host can supply its own speech to text (a self-hosted model, say) as the `dictation` option:
+
+```js
+BlockFusion.create(el, {
+	dictation: {
+		name: 'our speech service',
+		start({ onInterim, onFinal, onError, onEnd }, { lang }) {
+			// stream audio to the service; call onInterim(text) as words come in,
+			// onFinal(text) when they settle, onError(message), onEnd()
+			return { stop() { /* stop listening */ } };
+		},
+	},
+});
+```
+
+`BlockFusion.webSpeechDictation()` returns the built-in provider, or null where the browser has none.
 
 ## Media provider
 

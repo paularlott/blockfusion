@@ -22,13 +22,13 @@ export const CANVAS_CSS = `
 /* The typing area shows on hover; the column's empty space also takes clicks (see Editor.onCanvasPointerDown) */
 [data-bf-col]:hover > .bf-col-content { outline-color: var(--bf-c-line); }
 [data-bf-col] > .bf-col-content:focus { outline-color: transparent; box-shadow: 0 0 0 2px var(--bf-c-ring); }
-/* An empty column (no content, or the single empty paragraph a new one gets): outlined, with a prompt */
-[data-bf-col] > .bf-col-content:is(:empty, :has(> p:only-child > br:only-child)) { outline: 1px dashed var(--bf-c-line); }
-[data-bf-col] > .bf-col-content:is(:empty, :has(> p:only-child > br:only-child))::before {
+/* An empty column (no text, images or media; kept current by the canvas): outlined, with a prompt */
+[data-bf-col] > .bf-col-content.bf-is-empty { outline: 1px dashed var(--bf-c-line); }
+[data-bf-col] > .bf-col-content.bf-is-empty::before {
 	content: attr(data-placeholder); position: absolute; inset: 0 auto auto 0.25em; pointer-events: none;
 	color: var(--bf-c-muted); font: italic 15px/1.4 system-ui, sans-serif;
 }
-[data-bf-col] > .bf-col-content:is(:empty, :has(> p:only-child > br:only-child)):focus::before { content: none; }
+[data-bf-col] > .bf-col-content.bf-is-empty:focus::before { content: none; }
 
 /* Handles: 28px targets, shown on hover, focus and for the active row; always on touch screens. */
 .bf-handle {
@@ -77,6 +77,10 @@ export const CANVAS_CSS = `
 .bf-addbar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 16px 0; margin-top: 8px; border-top: 1px dashed var(--bf-c-line); }
 .bf-empty { text-align: center; color: var(--bf-c-muted); font: 15px/1.5 system-ui, sans-serif; margin: 24px 0 0; }
 .bf-drop-target { box-shadow: inset 0 0 0 3px var(--bf-c-ring) !important; }
+/* Dictation: words still being recognised, shown in place but never saved */
+.bf-dictation { color: var(--bf-c-muted); font-style: italic; border-bottom: 2px dotted var(--bf-c-ring); }
+.bf-dictation:empty { display: inline-block; width: 2px; height: 1em; vertical-align: text-bottom; border: 0; background: var(--bf-c-ring); animation: bf-blink 1s steps(1) infinite; }
+@keyframes bf-blink { 50% { opacity: 0; } }
 img.bf-selected { outline: 3px solid var(--bf-c-ring); outline-offset: 2px; }
 /* "Go to" from the checker: a ring around the element, dark and light so it shows on any background. */
 .bf-flash { position: absolute !important; z-index: 2147483000; pointer-events: none; box-sizing: border-box; border: 3px solid #b45309; border-radius: 4px; box-shadow: 0 0 0 2px #fff, inset 0 0 0 2px #fff; animation: bf-flash 2.5s ease-out forwards; }
@@ -88,10 +92,10 @@ img.bf-selected { outline: 3px solid var(--bf-c-ring); outline-offset: 2px; }
 	.bf-handle:focus-visible, .bf-cbtn:focus-visible, [data-bf-col] > .bf-col-content:focus { outline: 3px solid Highlight; }
 	.bf-cbtn[aria-pressed="true"] { background: Highlight; color: HighlightText; }
 	[data-bf-row]:hover, [data-bf-row].bf-active { outline-color: CanvasText; }
-	[data-bf-col] > .bf-col-content:is(:empty, :has(> p:only-child > br:only-child)) { outline-color: CanvasText; }
+	[data-bf-col] > .bf-col-content.bf-is-empty { outline-color: CanvasText; }
 	.bf-raw-box { border-color: CanvasText; }
 	.bf-flash { forced-color-adjust: none; border-color: Highlight; box-shadow: none; }
 	.bf-drop-line { forced-color-adjust: none; background: Highlight; box-shadow: none; }
 }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } .bf-flash { animation: none; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } .bf-flash, .bf-dictation { animation: none; } }
 `;

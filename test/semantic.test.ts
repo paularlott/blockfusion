@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { semanticInline } from '../src/commands/text';
+import { semanticInline, trailingBreaks } from '../src/commands/text';
 
 describe('semanticInline', () => {
 	it('turns <b>/<i> into <strong>/<em>, keeping attributes', () => {
@@ -19,5 +19,14 @@ describe('semanticInline', () => {
 		root.innerHTML = '<p><i class="fa fa-star"></i> star</p>';
 		semanticInline(root);
 		expect(root.innerHTML).toBe('<p><i class="fa fa-star"></i> star</p>');
+	});
+});
+
+describe('trailingBreaks', () => {
+	it('drops a <br> left at the end of a block with text', () => {
+		const root = document.createElement('div');
+		root.innerHTML = '<p>and the second<br></p><p><br></p><p>line one<br>line two</p><p>gap<br><br></p>';
+		trailingBreaks(root);
+		expect(root.innerHTML).toBe('<p>and the second</p><p><br></p><p>line one<br>line two</p><p>gap<br><br></p>');
 	});
 });

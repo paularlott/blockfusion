@@ -8,13 +8,14 @@ import { convertHTML, detectConverter, loadHTML, parseWith } from './converters/
 import { createGridConverter, spanParser } from './converters/grid';
 import { builtinConverters, registerBuiltinConverters } from './converters/index';
 import { getConverter, listConverters, registerConverter } from './converters/registry';
-import { CSSGRID_STYLESHEET } from './converters/cssgrid';
+import { CSSGRID_STYLESHEET, cssGridStylesheet } from './converters/cssgrid';
 import { Editor } from './editor';
 import { History } from './history/history';
 import * as model from './model/doc';
 import { cleanPaste, textToHtml } from './paste/clean';
 import * as plugins from './plugins/index';
 import { checkContent } from './plugins/checker';
+import { webSpeechDictation } from './plugins/dictation';
 import type { EditorOptions } from './types';
 
 registerBuiltinConverters();
@@ -49,6 +50,7 @@ export {
 	convertHTML,
 	createGridConverter,
 	CSSGRID_STYLESHEET,
+	cssGridStylesheet,
 	DEFAULT_BLOCKS,
 	detectConverter,
 	Editor,
@@ -63,6 +65,7 @@ export {
 	registerConverter,
 	spanParser,
 	textToHtml,
+	webSpeechDictation,
 };
 
 export type * from './types';

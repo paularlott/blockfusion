@@ -27,6 +27,33 @@ export interface MediaProvider {
 	upload?(file: File): Promise<{ src: string; alt?: string }>;
 }
 
+/** Callbacks a dictation session reports to. */
+export interface DictationHandlers {
+	/** Words heard so far that may still change; replaces the previous interim text. */
+	onInterim(text: string): void;
+	/** Words that are settled and go into the content. */
+	onFinal(text: string): void;
+	/** A problem the user should hear about (microphone blocked, no service). */
+	onError(message: string): void;
+	/** The session ended on its own (not by stop()). */
+	onEnd(): void;
+}
+
+export interface DictationSession {
+	stop(): void;
+}
+
+/**
+ * Speech to text. The built-in provider uses the browser's speech
+ * recognition (Web Speech API); a host can supply its own (a server-side
+ * model, a desktop app, ...).
+ */
+export interface DictationProvider {
+	/** Shown in the button's tooltip, e.g. "browser speech recognition". */
+	name?: string;
+	start(handlers: DictationHandlers, opts: { lang: string }): DictationSession;
+}
+
 /** A code editor for raw HTML and source view (e.g. an Ace adapter). */
 export interface CodeEditorInstance {
 	getValue(): string;
@@ -130,6 +157,11 @@ export interface EditorOptions {
 	siteTheme?: SiteTheme | false;
 	/** Colour mode the canvas starts in. Default 'light'. */
 	colorMode?: ColorMode;
+	/**
+	 * Speech to text (the Dictate button). Off by default. true uses the
+	 * browser's speech recognition where it exists; a provider uses that.
+	 */
+	dictation?: DictationProvider | boolean;
 	/**
 	 * Columns in the site's grid when it isn't built with the converter's
 	 * default (12), e.g. 24 for a fusionCSS or Bootstrap build with

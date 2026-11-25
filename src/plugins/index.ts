@@ -2,6 +2,7 @@
 import type { EditorOptions, Plugin } from '../types';
 import { blocksPlugin } from './blocks';
 import { checkerPlugin } from './checker';
+import { dictationPlugin } from './dictation';
 import { formattingPlugin } from './formatting';
 import { helpPlugin } from './help';
 import { historyPlugin } from './history';
@@ -11,7 +12,7 @@ import { sourcePlugin } from './source';
 import { structurePlugin } from './structure';
 
 export function builtinPlugins(opts: EditorOptions): Plugin[] {
-	return [historyPlugin, formattingPlugin, insertPlugin, blocksPlugin(opts), structurePlugin, siteThemePlugin, sourcePlugin, checkerPlugin, helpPlugin];
+	return [historyPlugin, formattingPlugin, insertPlugin, dictationPlugin(opts), blocksPlugin(opts), structurePlugin, siteThemePlugin, sourcePlugin, checkerPlugin, helpPlugin];
 }
 
-export { blocksPlugin, checkerPlugin, formattingPlugin, helpPlugin, historyPlugin, insertPlugin, siteThemePlugin, sourcePlugin, structurePlugin };
+export { blocksPlugin, checkerPlugin, dictationPlugin, formattingPlugin, helpPlugin, historyPlugin, insertPlugin, siteThemePlugin, sourcePlugin, structurePlugin };

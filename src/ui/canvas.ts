@@ -39,6 +39,7 @@ export class Canvas {
 	/** Last selection inside a column, restored before text commands. */
 	private savedRange: Range | null = null;
 	private resizeObs?: ResizeObserver;
+	private emptyObs?: MutationObserver;
 	private siteTheme: SiteTheme | null = null;
 	private colorMode: ColorMode = 'light';
 	private gridStyle!: HTMLStyleElement;
@@ -105,6 +106,21 @@ export class Canvas {
 		d.addEventListener('drop', (e) => ed.onCanvasDrop(e));
 		d.addEventListener('pointerdown', (e) => ed.onCanvasPointerDown(e));
 		this.applyTheme();
+		// Keep each column's "empty" mark current as its content changes, however it changes
+		if (typeof MutationObserver !== 'undefined') {
+			this.emptyObs = new MutationObserver((list) => {
+				const seen = new Set<HTMLElement>();
+				for (const m of list) {
+					const node = m.target.nodeType === 1 ? (m.target as Element) : m.target.parentElement;
+					const content = node?.closest?.('[data-bf-content]') as HTMLElement | null;
+					if (content && !seen.has(content)) {
+						seen.add(content);
+						markEmpty(content);
+					}
+				}
+			});
+			this.emptyObs.observe(this.root, { childList: true, characterData: true, subtree: true });
+		}
 		if (typeof ResizeObserver !== 'undefined') {
 			this.resizeObs = new ResizeObserver(() => this.fitHeight());
 			this.resizeObs.observe(this.doc.documentElement);
@@ -303,6 +319,7 @@ export class Canvas {
 				'data-bf-content': col.id,
 			});
 			content.innerHTML = conv.mapHtml(col.html, 'out') || '<p><br></p>';
+			markEmpty(content);
 			el.append(content);
 		}
 		return el;
@@ -584,6 +601,15 @@ export class Canvas {
 
 	destroy(): void {
 		this.resizeObs?.disconnect();
+		this.emptyObs?.disconnect();
 		this.iframe.remove();
 	}
+}
+
+/** Content that shows nothing: no text and no image, media or table. Dictation in progress counts as content. */
+const VISIBLE = 'img, video, audio, iframe, picture, svg, canvas, embed, object, table, hr, input, select, textarea, button, .bf-dictation';
+
+function markEmpty(content: HTMLElement): void {
+	const empty = !(content.textContent ?? '').trim() && !content.querySelector(VISIBLE);
+	content.classList.toggle('bf-is-empty', empty);
 }

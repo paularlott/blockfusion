@@ -3,6 +3,7 @@ import type { Plugin } from '../types';
 import { openDialog } from '../ui/dialog';
 import { h } from '../ui/dom';
 import { describeShortcut } from '../ui/toolbar';
+import { DICTATION_COMMANDS } from './dictation';
 
 export const helpPlugin: Plugin = {
 	id: 'help',
@@ -32,7 +33,21 @@ export const helpPlugin: Plugin = {
 					h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, 'Action'), h('th', { scope: 'col' }, 'Keys'))),
 					h('tbody', {}, ...rows.map(([a, k]) => h('tr', {}, h('td', {}, a), h('td', {}, h('kbd', {}, k))))),
 				);
-				void openDialog(ed.root, { title: 'Keyboard help', body: h('div', { className: 'bf-keys-wrap', tabindex: '0', role: 'region', 'aria-label': 'Shortcut list' }, table), submitLabel: null, wide: true });
+				const body: HTMLElement[] = [h('div', { className: 'bf-keys-wrap', tabindex: '0', role: 'region', 'aria-label': 'Shortcut list' }, table)];
+				if (ed.commands.has('dictate')) {
+					body.push(
+						h('h3', { className: 'bf-keys-title' }, 'Spoken commands while dictating'),
+						h(
+							'table',
+							{ className: 'bf-keys' },
+							h('caption', { className: 'bf-sr-only' }, 'Spoken commands while dictating'),
+							h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, 'Say'), h('th', { scope: 'col' }, 'Does'))),
+							h('tbody', {}, ...DICTATION_COMMANDS.map((c) => h('tr', {}, h('td', {}, `“${c.say}”`), h('td', {}, c.does)))),
+						),
+						h('p', { className: 'bf-hint' }, 'Stop dictating with the Dictate button or Escape. Punctuation depends on the browser: Edge adds it, Chrome and Safari mostly don’t.'),
+					);
+				}
+				void openDialog(ed.root, { title: 'Keyboard help', body, submitLabel: null, wide: true });
 			},
 		});
 		editor.addToolbarItem({ type: 'button', id: 'help', command: 'help' });

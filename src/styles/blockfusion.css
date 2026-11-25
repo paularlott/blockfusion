@@ -140,9 +140,15 @@
 .bf-editor *::after {
 	box-sizing: border-box;
 }
-.bf-editor :focus-visible {
+.bf-editor :focus-visible,
+.bf-toasts :focus-visible {
 	outline: 2px solid var(--bf-focus);
 	outline-offset: 2px;
+}
+.bf-toasts *,
+.bf-toasts *::before,
+.bf-toasts *::after {
+	box-sizing: border-box;
 }
 .bf-editor [hidden] {
 	display: none !important;
@@ -873,5 +879,63 @@
 
 .bf-dialog-message {
 	margin: 0;
+	color: var(--bf-fg);
+}
+
+/* Dictation in progress: the Dictate button turns red (pressed state carries the meaning) */
+.bf-tbtn[data-id='dictate'][aria-pressed='true'] {
+	color: var(--bf-danger);
+	border-color: var(--bf-danger);
+}
+
+/* Toasts (editor.notify): bottom right of the window, newest at the bottom; they go by themselves */
+.bf-toasts {
+	position: fixed;
+	inset-inline-end: 16px;
+	bottom: 16px;
+	z-index: 2147483000;
+	display: grid;
+	gap: 8px;
+	width: min(420px, calc(100vw - 32px));
+	pointer-events: none;
+	font: 14px/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+.bf-toast {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 6px 6px 12px;
+	border: 1px solid var(--bf-border-strong);
+	border-radius: 8px;
+	background: var(--bf-surface);
+	color: var(--bf-fg);
+	box-shadow: var(--bf-shadow);
+	pointer-events: auto;
+	animation: bf-toast-in 0.15s ease-out;
+}
+.bf-toast > p {
+	flex: 1;
+	margin: 0;
+}
+.bf-toast-error {
+	border-color: var(--bf-danger);
+	border-inline-start-width: 4px;
+}
+@keyframes bf-toast-in {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.bf-toast {
+		animation: none;
+	}
+}
+
+.bf-keys-title {
+	margin: 8px 0 0;
+	font-size: 15px;
+	font-weight: 650;
 	color: var(--bf-fg);
 }

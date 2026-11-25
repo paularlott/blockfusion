@@ -24,7 +24,7 @@ import type {
 	SiteTheme,
 	ToolbarItem,
 } from './types';
-import { normaliseContent, semanticInline } from './commands/text';
+import { normaliseContent, semanticInline, trailingBreaks } from './commands/text';
 import { Canvas } from './ui/canvas';
 import { deepActiveElement } from './ui/dialog';
 import { h, isMac } from './ui/dom';
@@ -441,6 +441,53 @@ export class Editor {
 		this.live.say(message);
 	}
 
+	/**
+	 * Show a short message as a toast at the bottom right of the window, and
+	 * announce it.
+	 * It goes by itself (after 6 seconds, 12 for errors), waits while the
+	 * pointer or focus is on it, and can be dismissed. A message with the
+	 * same `key` replaces the last one; clearNotices(key) removes them.
+	 */
+	notify(message: string, kind: 'info' | 'error' = 'info', opts: { key?: string } = {}): void {
+		this.announce(message);
+		const host = toastHost();
+		if (opts.key) this.clearNotices(opts.key);
+		const close = h('button', { type: 'button', className: 'bf-btn bf-btn-icon', 'aria-label': 'Dismiss message' });
+		close.innerHTML = icon('close');
+		const el = h('div', { className: `bf-toast bf-toast-${kind}`, 'data-key': opts.key ?? null }, h('p', {}, message), close);
+		// The toast lives on the page, outside the editor: give it the editor's colours (light or dark)
+		const cs = getComputedStyle(this.root);
+		for (const v of ['--bf-surface', '--bf-surface-3', '--bf-fg', '--bf-border-strong', '--bf-danger', '--bf-shadow', '--bf-focus', '--bf-control']) el.style.setProperty(v, cs.getPropertyValue(v));
+		el.style.colorScheme = cs.colorScheme;
+		(el as HTMLElement & { _bfEditor?: Editor })._bfEditor = this;
+		let timer = 0;
+		const remove = () => {
+			clearTimeout(timer);
+			el.remove();
+		};
+		const arm = () => {
+			clearTimeout(timer);
+			timer = window.setTimeout(remove, kind === 'error' ? 12000 : 6000);
+		};
+		close.addEventListener('click', remove);
+		// Wait while someone is reading or about to dismiss it
+		el.addEventListener('pointerenter', () => clearTimeout(timer));
+		el.addEventListener('pointerleave', arm);
+		el.addEventListener('focusin', () => clearTimeout(timer));
+		el.addEventListener('focusout', arm);
+		host.append(el);
+		// At most three at once
+		while (host.children.length > 3) host.firstElementChild!.remove();
+		arm();
+	}
+
+	/** Remove this editor's toasts: those with a key, or all of them. */
+	clearNotices(key?: string): void {
+		for (const t of Array.from(document.querySelectorAll<HTMLElement>('.bf-toasts > .bf-toast'))) {
+			if ((t as HTMLElement & { _bfEditor?: Editor })._bfEditor === this && (!key || t.dataset.key === key)) t.remove();
+		}
+	}
+
 	/** Focus the editor: the active column, else the first one, else the add bar. */
 	focus(): void {
 		this.focusCanvas();
@@ -582,6 +629,7 @@ export class Editor {
 				console.error(err);
 			}
 		}
+		this.clearNotices();
 		this.canvas.destroy();
 		this.live.destroy();
 		this.root.remove();
@@ -643,11 +691,14 @@ export class Editor {
 		const el = this.canvas.content(colId);
 		if (!el) return null;
 		const copy = el.cloneNode(true) as HTMLElement;
+		// Dictation's interim words are not content
+		for (const m of Array.from(copy.querySelectorAll('.bf-dictation'))) m.remove();
 		for (const img of Array.from(copy.querySelectorAll('.bf-selected'))) {
 			img.classList.remove('bf-selected');
 			if (!img.getAttribute('class')) img.removeAttribute('class');
 		}
 		semanticInline(copy);
+		trailingBreaks(copy);
 		let html = copy.innerHTML.trim();
 		if (/^(<p>)?(<br>)?(<\/p>)?$/.test(html)) html = '';
 		return this.converter.mapHtml(html, 'in');
@@ -1040,6 +1091,16 @@ export class Editor {
 	editRaw(rowId: string, colId?: string): void {
 		this.exec('editRaw', { rowId, colId });
 	}
+}
+
+/** The page's toast stack, bottom right of the window, shared by every editor. */
+function toastHost(): HTMLElement {
+	let host = document.querySelector<HTMLElement>('body > .bf-toasts');
+	if (!host) {
+		host = h('div', { className: 'bf-toasts' });
+		document.body.append(host);
+	}
+	return host;
 }
 
 /** The drag data type of a block dragged from the block panel. */

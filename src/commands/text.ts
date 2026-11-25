@@ -81,6 +81,25 @@ export function semanticInline(root: HTMLElement): void {
 	}
 }
 
+/**
+ * Drop a <br> left at the end of a block that has other content (browsers
+ * add one as a placeholder and leave it behind); it renders nothing.
+ */
+export function trailingBreaks(root: HTMLElement): void {
+	for (const br of Array.from(root.querySelectorAll('br'))) {
+		const block = br.parentElement;
+		if (!block || block === root || !/^(P|H[1-6]|LI|DIV|BLOCKQUOTE|PRE|TD|TH)$/.test(block.tagName)) continue;
+		let next = br.nextSibling;
+		while (next && next.nodeType === 3 && !next.textContent) next = next.nextSibling;
+		if (next) continue;
+		let prev = br.previousSibling;
+		while (prev && prev.nodeType === 3 && !prev.textContent) prev = prev.previousSibling;
+		// Keep it when it's all the block has, or when it ends a run of breaks (a blank line)
+		if (!prev || prev.nodeName === 'BR' || !(block.textContent ?? '').trim()) continue;
+		br.remove();
+	}
+}
+
 export function normaliseContent(root: HTMLElement): void {
 	semanticInline(root);
 	for (const list of Array.from(root.querySelectorAll('p > ul, p > ol'))) {
