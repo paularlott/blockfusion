@@ -107,6 +107,8 @@ Normal form posts therefore just work. On any other element, its current HTML be
 | `theme` | `'auto'` | The editor's own light/dark. `'auto'` follows a `data-theme="light\|dark"` attribute on an ancestor, then `prefers-color-scheme`. `'light'` or `'dark'` forces one. It doesn't change how the page being edited looks (see `siteTheme`). |
 | `breakpoint` | `'md'` | Breakpoint that new layouts and resizes apply to (`sm`, `md`, `lg`, `xl` or `xxl`). Columns stack below it. |
 | `height` | `'auto'` | `'auto'` grows the canvas with its content. Any CSS length fixes it and scrolls. |
+
+The toolbar sticks to the top of the window as the page scrolls, and an open side panel stays just below it. A host page with its own sticky bar sets the CSS variable `--bf-sticky-top` (on the editor or an ancestor) to that bar's height, so the toolbar sits below it.
 | `minHeight` | `'320px'` | Minimum canvas height in auto mode. |
 | `label` | `'Page editor'` | Accessible name of the editor region. |
 | `rawMarkers` | `true` | Wrap raw code in `<!--bf:raw-->…<!--/bf:raw-->` so it's recognised again on load. |
@@ -541,7 +543,7 @@ The demo (`demo/index.html`) runs the editor on a textarea in a form. It has:
 
 Everything loads locally:
 
-- **Framework CSS.** `node scripts/vendor.mjs [fusionCSS dir] [axe.min.js]` fetches the framework stylesheets into `demo/vendor/` with `npm pack`, builds the Tailwind CSS, and copies fusionCSS from a local checkout. The results are committed.
+- **Framework CSS.** `node scripts/vendor.mjs [fusionCSS dir] [axe.min.js]` fetches the framework stylesheets into `demo/vendor/` with `npm pack` (Bootstrap 3, 5 and 6 alpha 2, Foundation 5 and 6), builds the Tailwind CSS, and copies fusionCSS from a local checkout. The results are committed.
 - **axe-core.** The script can also copy axe-core into `demo/vendor` for local accessibility testing; that file is git-ignored.
 
 ### Source layout

@@ -20,6 +20,7 @@ const axe = process.argv[3] ? resolve(process.argv[3]) : null;
 const packages = [
 	['bootstrap@3.4.1', 'package/dist/css/bootstrap.min.css', 'bootstrap3.min.css'],
 	['bootstrap@5.3.9', 'package/dist/css/bootstrap.min.css', 'bootstrap5.min.css'],
+	['bootstrap@6.0.0-alpha.2', 'package/dist/css/bootstrap.min.css', 'bootstrap6.min.css'],
 	['foundation-sites@5.5.3', 'package/css/foundation.min.css', 'foundation5.min.css'],
 	['foundation-sites@6.9.0', 'package/dist/css/foundation.min.css', 'foundation6.min.css'],
 ];

@@ -166,9 +166,14 @@
 
 /* --------------------------------------------------------------- toolbar */
 
+/*
+ * The toolbar sticks to the top of the viewport while the editor scrolls by.
+ * A host page with its own sticky bar sets --bf-sticky-top to its height.
+ * --bf-header-h is the toolbar's measured height, kept current by the editor.
+ */
 .bf-header {
 	position: sticky;
-	top: 0;
+	top: var(--bf-sticky-top, 0px);
 	z-index: 6;
 	border-bottom: 1px solid var(--bf-border-strong);
 	border-radius: 10px 10px 0 0;
@@ -298,20 +303,34 @@
 .bf-canvas-narrow {
 	box-shadow: var(--bf-shadow);
 }
+/*
+ * The side panel runs the height of the stage without setting it, so a long
+ * list (all the blocks) can't make the editor taller than its content. Its
+ * section sticks just below the toolbar and scrolls inside itself.
+ */
 .bf-panel {
-	flex: 0 0 300px;
+	position: absolute;
+	inset-block: 0;
+	inset-inline-end: 0;
 	width: 300px;
-	max-height: 100%;
 	border-inline-start: 1px solid var(--bf-border-strong);
 	background: var(--bf-surface);
 	border-radius: 0 0 10px 0;
 }
+.bf-panel-open .bf-stage {
+	margin-inline-end: 300px;
+}
+/* Room for the panel when the content is short */
+.bf-panel-open .bf-main {
+	min-height: min(640px, calc(100vh - var(--bf-sticky-top, 0px) - var(--bf-header-h, 56px)));
+}
 .bf-panel-section {
 	position: sticky;
-	top: 56px;
+	top: calc(var(--bf-sticky-top, 0px) + var(--bf-header-h, 56px));
 	display: flex;
 	flex-direction: column;
-	max-height: calc(100vh - 72px);
+	/* --bf-panel-room: the space left below the toolbar as the editor's end scrolls up */
+	max-height: min(100%, var(--bf-panel-room, 100vh), calc(100vh - var(--bf-sticky-top, 0px) - var(--bf-header-h, 56px)));
 }
 .bf-panel-header {
 	display: flex;
@@ -354,6 +373,12 @@
 	.bf-panel-section {
 		position: static;
 		max-height: 70vh;
+	}
+	.bf-panel-open .bf-stage {
+		margin-inline-end: 0;
+	}
+	.bf-panel-open .bf-main {
+		min-height: 0;
 	}
 	.bf-stage {
 		padding: 6px;

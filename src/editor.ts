@@ -134,6 +134,7 @@ export class Editor {
 	private panels = new Map<string, { panel: Panel; el: HTMLElement; built: boolean }>();
 	private panelHost: HTMLElement;
 	private openPanelId: string | null = null;
+	private fitPanel: () => void = () => {};
 	private panelReturn: HTMLElement | null = null;
 	private suppressInput = 0;
 	private syncTimer = 0;
@@ -184,6 +185,41 @@ export class Editor {
 		this.root.append(header, main);
 		this.live = new Announcer(this.root);
 		this.toolbar = new Toolbar(this, header, `${this.options.label} toolbar`);
+
+		// The side panel sticks below the toolbar, whose height changes as it
+		// wraps (and is 0 when the toolbar scrolls away on narrow screens).
+		if (typeof ResizeObserver !== 'undefined') {
+			const measure = () => {
+				const sticky = getComputedStyle(header).position === 'sticky';
+				this.root.style.setProperty('--bf-header-h', `${sticky ? Math.ceil(header.getBoundingClientRect().height) : 0}px`);
+			};
+			const ro = new ResizeObserver(measure);
+			ro.observe(header);
+			ro.observe(this.root);
+			this.cleanups.push(() => ro.disconnect());
+		}
+
+		// Near the end of the editor there is less room below the toolbar than
+		// the panel's height: shrink it to fit rather than slide under the toolbar.
+		let roomFrame = 0;
+		const fitPanel = () => {
+			roomFrame = 0;
+			if (this.panelHost.hidden) return;
+			const below = header.getBoundingClientRect().bottom;
+			const end = main.getBoundingClientRect().bottom;
+			this.root.style.setProperty('--bf-panel-room', `${Math.max(120, Math.floor(end - Math.max(below, main.getBoundingClientRect().top)))}px`);
+		};
+		const onScroll = () => {
+			if (!roomFrame && !this.panelHost.hidden) roomFrame = requestAnimationFrame(fitPanel);
+		};
+		document.addEventListener('scroll', onScroll, { capture: true, passive: true });
+		window.addEventListener('resize', onScroll, { passive: true });
+		this.fitPanel = fitPanel;
+		this.cleanups.push(() => {
+			document.removeEventListener('scroll', onScroll, { capture: true });
+			window.removeEventListener('resize', onScroll);
+			cancelAnimationFrame(roomFrame);
+		});
 
 		if (this.textarea) {
 			this.textarea.hidden = true;
@@ -514,6 +550,7 @@ export class Editor {
 		}
 		this.panelHost.hidden = false;
 		this.root.classList.add('bf-panel-open');
+		this.fitPanel();
 		this.openPanelId = id;
 		p.panel.onOpen?.(this);
 		const first = p.el.querySelector<HTMLElement>('.bf-panel-body input, .bf-panel-body select, .bf-panel-body button');
