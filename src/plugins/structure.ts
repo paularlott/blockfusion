@@ -4,6 +4,8 @@
  */
 import {
 	addColCmd,
+	confirmDeleteCol,
+	confirmDeleteRow,
 	convertColToCode,
 	unwrapRawRow,
 	wrapRawRow,
@@ -162,7 +164,7 @@ export const structurePlugin: Plugin = {
 		rowAct({ id: 'row-dup', label: 'Duplicate row', shortcut: 'Mod+D', run: (ed, r) => duplicateRowCmd(ed, r.rowId) });
 		rowAct({ id: 'row-settings', label: 'Row settings…', visible: isGrid, run: (ed, r) => settingsDialog(ed, 'row', r.rowId) });
 		rowAct({ id: '---2', label: '', run: () => {} });
-		rowAct({ id: 'row-delete', label: 'Delete row', shortcut: 'Delete', danger: true, run: (ed, r) => deleteRowCmd(ed, r.rowId) });
+		rowAct({ id: 'row-delete', label: 'Delete row', shortcut: 'Delete', danger: true, run: (ed, r) => confirmDeleteRow(ed, r.rowId) });
 
 		const colPos = (ed: Editor, id?: string) => (id ? findCol(ed.doc, id) : undefined);
 		const isRawCol = (ed: Editor, ref: { colId?: string }) => colPos(ed, ref.colId)?.col.kind === 'raw';
@@ -211,6 +213,6 @@ export const structurePlugin: Plugin = {
 		});
 		colAct({ id: 'col-settings', label: 'Column settings…', run: (ed, r) => settingsDialog(ed, 'col', r.colId!) });
 		colAct({ id: '---4', label: '', run: () => {} });
-		colAct({ id: 'col-delete', label: 'Delete column', shortcut: 'Delete', danger: true, run: (ed, r) => deleteColCmd(ed, r.colId!) });
+		colAct({ id: 'col-delete', label: 'Delete column', shortcut: 'Delete', danger: true, run: (ed, r) => confirmDeleteCol(ed, r.colId!) });
 	},
 };

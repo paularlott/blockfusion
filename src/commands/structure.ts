@@ -4,6 +4,8 @@
  * keyboard users can carry on.
  */
 import type { Editor } from '../editor';
+import { confirmDialog } from '../ui/dialogs/confirm';
+import { describeShortcut } from '../ui/toolbar';
 import {
 	addCol,
 	clone,
@@ -118,6 +120,41 @@ export function duplicateRowCmd(editor: Editor, rowId: string): void {
 		},
 		{ focus: () => ({ kind: 'row-handle', id }), announce: (d) => `Row duplicated, copy is ${position(d, id)}` },
 	);
+}
+
+const undoKeys = () => describeShortcut('Mod+Z').text;
+
+/** Ask, then delete a row. */
+export async function confirmDeleteRow(editor: Editor, rowId: string): Promise<void> {
+	const i = rowIndex(editor.doc, rowId);
+	const row = editor.doc.rows[i];
+	if (!row) return;
+	const what =
+		row.kind === 'raw'
+			? 'its HTML code'
+			: row.cols.length === 1
+				? 'its column'
+				: `its ${row.cols.length} columns`;
+	const ok = await confirmDialog(editor, {
+		title: `Delete row ${i + 1}?`,
+		message: `Row ${i + 1} and ${what} will be removed. You can undo this with ${undoKeys()}.`,
+		confirmLabel: 'Delete row',
+	});
+	if (ok) deleteRowCmd(editor, rowId);
+}
+
+/** Ask, then delete a column (and its row, when it is the last one). */
+export async function confirmDeleteCol(editor: Editor, colId: string): Promise<void> {
+	const ref = findCol(editor.doc, colId);
+	if (!ref) return;
+	const last = ref.row.cols.length === 1;
+	const name = `Column ${ref.colIndex + 1} of row ${ref.rowIndex + 1}`;
+	const ok = await confirmDialog(editor, {
+		title: `Delete column ${ref.colIndex + 1}?`,
+		message: `${name}${last ? ', the only column, and its row' : ''} will be removed. You can undo this with ${undoKeys()}.`,
+		confirmLabel: 'Delete column',
+	});
+	if (ok) deleteColCmd(editor, colId);
 }
 
 export function deleteRowCmd(editor: Editor, rowId: string): void {

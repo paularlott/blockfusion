@@ -17,6 +17,11 @@ export interface DialogOptions {
 	body: Node | Node[];
 	/** Label of the submit button. `null` shows only a Close button. */
 	submitLabel?: string | null;
+	/**
+	 * Destructive (delete and the like): the submit button is styled as
+	 * such, focus starts on Cancel and the dialog is an alertdialog.
+	 */
+	danger?: boolean;
 	cancelLabel?: string;
 	extra?: DialogButton[];
 	wide?: boolean;
@@ -80,6 +85,7 @@ export function openDialog(host: HTMLElement, opts: DialogOptions): Promise<bool
 		body.append(...(Array.isArray(opts.body) ? opts.body : [opts.body]));
 
 		const footer = h('footer', { className: 'bf-dialog-footer' });
+		let cancelBtn: HTMLElement | null = null;
 		const left = h('div', { className: 'bf-dialog-extra' });
 		for (const b of opts.extra ?? []) {
 			left.append(h('button', { type: 'button', className: 'bf-btn' + (b.danger ? ' bf-btn-danger' : ''), onclick: () => b.onClick(close) }, b.label));
@@ -88,9 +94,10 @@ export function openDialog(host: HTMLElement, opts: DialogOptions): Promise<bool
 		if (opts.submitLabel === null) {
 			footer.append(h('button', { type: 'button', className: 'bf-btn bf-btn-primary', onclick: () => close(false) }, opts.cancelLabel ?? 'Close'));
 		} else {
+			cancelBtn = h('button', { type: 'button', className: 'bf-btn', onclick: () => close(false) }, opts.cancelLabel ?? 'Cancel');
 			footer.append(
-				h('button', { type: 'button', className: 'bf-btn', onclick: () => close(false) }, opts.cancelLabel ?? 'Cancel'),
-				h('button', { type: 'submit', className: 'bf-btn bf-btn-primary' }, opts.submitLabel ?? 'Save'),
+				cancelBtn,
+				h('button', { type: 'submit', className: opts.danger ? 'bf-btn bf-btn-danger-solid' : 'bf-btn bf-btn-primary' }, opts.submitLabel ?? 'Save'),
 			);
 		}
 		form.append(header, body, footer);
@@ -135,7 +142,8 @@ export function openDialog(host: HTMLElement, opts: DialogOptions): Promise<bool
 		host.appendChild(dialog);
 		if (typeof dialog.showModal === 'function') dialog.showModal();
 		else dialog.setAttribute('open', '');
-		const target = opts.initialFocus ?? focusables(body)[0] ?? focusables(dialog)[0];
+		if (opts.danger) dialog.setAttribute('role', 'alertdialog');
+		const target = opts.initialFocus ?? (opts.danger ? cancelBtn : null) ?? focusables(body)[0] ?? focusables(dialog)[0];
 		target?.focus();
 		opts.onReady?.(close);
 	});

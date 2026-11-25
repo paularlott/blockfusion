@@ -611,6 +611,14 @@
 .bf-btn-danger:hover {
 	background: var(--bf-danger-soft);
 }
+.bf-btn-danger-solid {
+	border-color: var(--bf-danger-solid);
+	background: var(--bf-danger-solid);
+	color: var(--bf-on-solid);
+}
+.bf-btn-danger-solid:hover {
+	background: color-mix(in srgb, var(--bf-danger-solid) 82%, #000);
+}
 .bf-btn-icon {
 	padding: 4px;
 	border-color: transparent;
@@ -862,3 +870,8 @@
 	color: var(--bf-fg);
 }
 
+
+.bf-dialog-message {
+	margin: 0;
+	color: var(--bf-fg);
+}
