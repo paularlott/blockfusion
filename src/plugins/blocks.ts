@@ -26,19 +26,11 @@ function blockPreview(editor: Editor, block: Block): HTMLElement {
 	return box;
 }
 
-/** Where a clicked block goes, relative to the row being edited. */
-export type BlockPlace = 'below' | 'above' | 'start' | 'end';
-
-export function insertBlock(editor: Editor, block: Block, place: BlockPlace = 'below'): void {
+/** Insert a block after the current row (at the end when there is none). */
+export function insertBlock(editor: Editor, block: Block): void {
 	const rows = editor.blockRows(block);
 	if (!rows.length) return editor.announce(`Block ${block.name} is empty`);
-	const n = editor.doc.rows.length;
-	const active = editor.activeRow ? editor.doc.rows.findIndex((r) => r.id === editor.activeRow) : -1;
-	let index: number;
-	if (place === 'start') index = 0;
-	else if (place === 'end' || active < 0) index = n;
-	else index = place === 'above' ? active : active + 1;
-	editor.insertRowsAt(rows, index, `Insert block ${block.name}`);
+	editor.insertRowsAfterActive(rows, `Insert block ${block.name}`);
 }
 
 export const blocksPlugin = (opts: { blocks?: Block[]; blocksUrl?: string; defaultBlocks?: boolean }): Plugin => ({
@@ -65,28 +57,12 @@ export const blocksPlugin = (opts: { blocks?: Block[]; blocksUrl?: string; defau
 			render(container, ed) {
 				const search = h('input', { type: 'search', className: 'bf-input', id: nextId('bf-bsearch'), autocomplete: 'off', placeholder: 'Search blocks' });
 				const cat = h('select', { className: 'bf-input', id: nextId('bf-bcat') });
-				// Where a clicked block goes; dragging places it directly
-				const place = h('select', { className: 'bf-input', id: nextId('bf-bplace') });
-				place.append(
-					h('option', { value: 'below' }, 'Below the current row'),
-					h('option', { value: 'above' }, 'Above the current row'),
-					h('option', { value: 'start' }, 'At the top'),
-					h('option', { value: 'end' }, 'At the end'),
-				);
-				const placeHint = nextId('bf-bplace-hint');
-				place.setAttribute('aria-describedby', placeHint);
 				const count = h('p', { className: 'bf-hint', role: 'status', 'aria-live': 'polite' });
 				const list = h('ul', { className: 'bf-block-list', role: 'list' });
 				container.append(
 					h('div', { className: 'bf-field' }, h('label', { for: search.id, className: 'bf-label' }, 'Search'), search),
 					h('div', { className: 'bf-field' }, h('label', { for: cat.id, className: 'bf-label' }, 'Category'), cat),
-					h(
-						'div',
-						{ className: 'bf-field' },
-						h('label', { for: place.id, className: 'bf-label' }, 'Insert'),
-						place,
-						h('p', { className: 'bf-hint', id: placeHint }, 'Or drag a block onto the page, above or below any row.'),
-					),
+					h('p', { className: 'bf-hint' }, 'Click a block to add it after the current row, or drag it onto the page.'),
 					count,
 					list,
 				);
@@ -113,7 +89,7 @@ export const blocksPlugin = (opts: { blocks?: Block[]; blocksUrl?: string; defau
 							h('span', { className: 'bf-block-name' }, b.name),
 							b.description ? h('span', { className: 'bf-block-desc', id: descId! }, b.description) : null,
 						);
-						btn.addEventListener('click', () => insertBlock(ed, b, place.value as BlockPlace));
+						btn.addEventListener('click', () => insertBlock(ed, b));
 						btn.addEventListener('dragstart', (e) => {
 							ed.draggedBlock = b;
 							e.dataTransfer?.setData(BLOCK_DRAG_TYPE, b.id);
