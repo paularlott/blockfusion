@@ -488,7 +488,9 @@ How the site switches comes from, in order:
 
 1. the `siteTheme` option;
 2. the converter's convention: Bootstrap 5 and 6 use `data-bs-theme` on `<html>`;
-3. `prefers-color-scheme` rules in the canvas stylesheets (readable, same-origin sheets), which are previewed with the canvas's `color-scheme`. This also covers `light-dark()`.
+3. a dark theme in the canvas stylesheets (readable, same-origin sheets): `prefers-color-scheme` rules that change colours, or colours written with `light-dark()`. They're previewed with the canvas's `color-scheme`. Rules that only show or hide things, like Foundation 6's `show-for-dark-mode`, don't count.
+
+Frameworks themselves rarely ship a dark theme: Bootstrap 5.3+ and 6 do (`data-bs-theme`); fusionCSS, Bootstrap 3 and Foundation don't. Tailwind builds only the classes a site uses, so a Tailwind site gets the toggle once it uses `dark:` utilities (media strategy) or sets `siteTheme: { className: 'dark' }` (class strategy).
 
 ```js
 siteTheme: 'media'                                              // prefers-color-scheme / light-dark()

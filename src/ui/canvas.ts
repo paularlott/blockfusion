@@ -190,16 +190,30 @@ export class Canvas {
 	}
 
 	/**
-	 * Whether the canvas stylesheets have prefers-color-scheme rules. Sheets
-	 * from another origin can't be read and are skipped.
+	 * Whether the canvas stylesheets have a dark theme that follows the
+	 * colour scheme: prefers-color-scheme rules that change colours (not
+	 * just show or hide things, as Foundation's show-for-dark-mode does), or
+	 * colours written with light-dark(). Sheets from another origin can't be
+	 * read and are skipped.
 	 */
 	usesColorSchemeMedia(): boolean {
 		if (!this.doc) return false;
+		const COLOURISH = /^(--|color$|color-scheme$|background|border(-\w+)*-color$|border$|outline-color$|fill$|stroke$|box-shadow$|text-decoration-color$|caret-color$|accent-color$)/;
+		const changesColour = (rules: CSSRuleList): boolean => {
+			for (const r of Array.from(rules)) {
+				const style = (r as CSSStyleRule).style;
+				if (style) for (let i = 0; i < style.length; i++) if (COLOURISH.test(style[i])) return true;
+				const inner = (r as CSSGroupingRule).cssRules;
+				if (inner && changesColour(inner)) return true;
+			}
+			return false;
+		};
 		const scan = (rules: CSSRuleList): boolean => {
 			for (const r of Array.from(rules)) {
 				const media = (r as CSSMediaRule).media;
-				if (media && /prefers-color-scheme/.test(media.mediaText)) return true;
 				const inner = (r as CSSGroupingRule).cssRules;
+				if (media && /prefers-color-scheme/.test(media.mediaText) && inner && changesColour(inner)) return true;
+				if ((r as CSSStyleRule).style && /light-dark\(/.test((r as CSSStyleRule).style.cssText)) return true;
 				if (inner && scan(inner)) return true;
 			}
 			return false;
