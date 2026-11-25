@@ -12,11 +12,13 @@ import { clone, columnsOf, emptyDoc, findCol, findRow, insertRows, reId, scaleDo
 import { DEFAULT_COLUMNS, type Block, type Breakpoint, type Doc, type Row } from './model/types';
 import { cleanPaste, textToHtml, type PasteFilter } from './paste/clean';
 import type {
+	AssistantProvider,
 	CodeEditorFactory,
 	ColorMode,
 	Command,
 	EditorOptions,
 	HandleAction,
+	ImageDialogHook,
 	MediaProvider,
 	NamedValue,
 	Panel,
@@ -114,8 +116,13 @@ export class Editor {
 	doc: Doc;
 	converter: Converter;
 	media: MediaProvider | null;
+	/** The AI assistant, when the host gives one. */
+	assistant: AssistantProvider | null;
 	blocks: Block[] = [];
 	handleActions: HandleAction[] = [];
+	/** Additions to the image dialog from plugins. */
+	imageDialogHooks: ImageDialogHook[] = [];
+	private plugins = new Set<string>();
 	pasteFilters: PasteFilter[] = [];
 	codeEditor: CodeEditorFactory;
 	activeRow: string | null = null;
@@ -159,6 +166,7 @@ export class Editor {
 		};
 		this.converter = this.resolveConverter(this.options.converter);
 		this.media = opts.media ?? null;
+		this.assistant = opts.assistant ?? null;
 		this.codeEditor = opts.codeEditor ?? textareaCodeEditor;
 
 		let initial = opts.value;
@@ -274,6 +282,9 @@ export class Editor {
 
 	/** Install a plugin. */
 	use(plugin: Plugin): void {
+		// Once each: a plugin both registered globally and passed in options installs once
+		if (this.plugins.has(plugin.id)) return;
+		this.plugins.add(plugin.id);
 		const off = plugin.install(this);
 		if (typeof off === 'function') this.cleanups.push(off);
 	}

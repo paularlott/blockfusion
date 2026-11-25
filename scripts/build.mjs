@@ -4,6 +4,7 @@
  *   dist/blockfusion.mjs      ES module
  *   dist/blockfusion.css      editor chrome styles
  *   dist/blockfusion-grid.css stylesheet for sites using the CSS grid converter
+ *   dist/blockfusion-assistant.js / .mjs  the optional AI assistant (global BlockFusionAssistant)
  * Pass --watch to rebuild on change.
  */
 import * as esbuild from 'esbuild';
@@ -20,6 +21,9 @@ const configs = [
 	{ ...common, entryPoints: ['src/index.ts'], format: 'iife', globalName: 'BlockFusion', outfile: 'dist/blockfusion.js' },
 	{ ...common, entryPoints: ['src/index.ts'], format: 'esm', outfile: 'dist/blockfusion.mjs' },
 	{ ...common, entryPoints: ['src/styles/blockfusion.css'], outfile: 'dist/blockfusion.css' },
+	// The assistant on its own, so pages without AI don't download it
+	{ ...common, entryPoints: ['src/assistant/index.ts'], format: 'iife', globalName: 'BlockFusionAssistant', outfile: 'dist/blockfusion-assistant.js' },
+	{ ...common, entryPoints: ['src/assistant/index.ts'], format: 'esm', outfile: 'dist/blockfusion-assistant.mjs' },
 ];
 
 async function gridCss() {

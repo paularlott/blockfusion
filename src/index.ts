@@ -14,9 +14,10 @@ import { History } from './history/history';
 import * as model from './model/doc';
 import { cleanPaste, textToHtml } from './paste/clean';
 import * as plugins from './plugins/index';
+import { registerPlugin } from './plugins/index';
 import { checkContent } from './plugins/checker';
 import { webSpeechDictation } from './plugins/dictation';
-import type { EditorOptions } from './types';
+import type { EditorOptions, Plugin } from './types';
 
 registerBuiltinConverters();
 
@@ -41,6 +42,11 @@ export function create(target: HTMLElement | string, options: EditorOptions = {}
 /** The editor created on an element, if any. */
 export function get(el: HTMLElement): Editor | undefined {
 	return instances.get(el);
+}
+
+/** Add a plugin to every editor created from now on (add-ons such as blockfusion-assistant call it). */
+export function use(plugin: Plugin): void {
+	registerPlugin(plugin);
 }
 
 export {

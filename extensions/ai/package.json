@@ -1,0 +1,19 @@
+{
+  "name": "blockfusion-ai",
+  "version": "0.1.0",
+  "description": "Optional in-browser AI for BlockFusion: image descriptions and text rewrites with small open models.",
+  "license": "MIT",
+  "author": "Paul Arlott",
+  "type": "module",
+  "module": "dist/blockfusion-ai.mjs",
+  "files": ["dist", "src", "README.md"],
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "4.3.2"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

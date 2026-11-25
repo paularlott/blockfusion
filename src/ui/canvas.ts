@@ -387,9 +387,16 @@ export class Canvas {
 			'div',
 			{ className: 'bf-addbar', role: 'group', 'aria-label': 'Add content at the end' },
 			mk('Add row', 'addRow', () => this.editor.exec('addRow', { at: 'end' })),
-			mk('Add block', 'blocks', () => this.editor.exec('blocks')),
+			// Only when the page has blocks set up (the Blocks command says so)
+			this.editor.commands.get('blocks')?.isEnabled?.(this.editor) ? mk('Add block', 'blocks', () => this.editor.exec('blocks')) : null,
 			mk('Add HTML', 'code', () => this.editor.exec('addRaw', { at: 'end' })),
 		);
+	}
+
+	/** Redraw the add bar (the block library came or went). */
+	updateAddBar(): void {
+		const bar = this.root?.querySelector(':scope > .bf-addbar');
+		if (bar) bar.replaceWith(this.renderAddBar());
 	}
 
 	/** Replace one column's content without re-rendering (undo of typing). */

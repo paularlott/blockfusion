@@ -25,7 +25,7 @@ export const insertPlugin: Plugin = {
 			text: true,
 			isEnabled: hasText,
 			isActive: (ed) => !!ed.selectedImage?.isConnected,
-			run: (ed) => imageDialog(ed),
+			run: (ed, arg) => imageDialog(ed, (arg as { suggest?: boolean } | undefined) ?? {}),
 		});
 		editor.addToolbarItem({ type: 'button', id: 'link', command: 'link', toggle: true });
 		editor.addToolbarItem({ type: 'button', id: 'image', command: 'image' });

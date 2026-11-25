@@ -27,6 +27,113 @@ export interface MediaProvider {
 	upload?(file: File): Promise<{ src: string; alt?: string }>;
 }
 
+/** The id of a one-shot action (see AssistantAction). */
+export type AssistantTask = string;
+
+/**
+ * A one-shot action on the selection or paragraph, e.g. "Make shorter".
+ * `prompt` is the instruction sent to the provider with the text.
+ */
+export interface AssistantAction {
+	id: string;
+	label: string;
+	prompt: string;
+}
+
+/** Model loading or working; progress 0..1 when known. */
+export interface AssistantProgress {
+	text: string;
+	progress?: number;
+}
+
+/** An action the assistant can take on the page (JSON Schema parameters). */
+export interface AssistantTool {
+	name: string;
+	description: string;
+	parameters: Record<string, unknown>;
+}
+
+export interface AssistantToolCall {
+	name: string;
+	arguments: Record<string, unknown>;
+}
+
+/**
+ * The conversation so far. 'tool' messages report what an action did, for
+ * the model to carry on from.
+ */
+export interface AssistantMessage {
+	role: 'user' | 'assistant' | 'tool';
+	content: string;
+	/** On assistant messages: the actions it asked for. */
+	calls?: AssistantToolCall[];
+}
+
+/**
+ * An AI helper, in the browser (a local model) or on your own server.
+ * Every method is optional; the editor offers what the provider has.
+ */
+export interface AssistantProvider {
+	/** Shown with suggestions, e.g. "on this device" or "our server". */
+	name?: string;
+	/** Describe an image for its alt text. `image` is the file when the editor could read it. */
+	describeImage?(req: {
+		src: string;
+		image: Blob | null;
+		lang: string;
+		signal: AbortSignal;
+		onProgress?(p: AssistantProgress): void;
+	}): Promise<string>;
+	/**
+	 * Chat: answer, or ask for actions on the page. `context` describes the
+	 * page (rows, columns, the start of their text, the cursor); the editor
+	 * runs the actions, reports back as 'tool' messages and asks again until
+	 * the reply has no more actions.
+	 */
+	chat?(req: {
+		messages: AssistantMessage[];
+		tools: AssistantTool[];
+		context: string;
+		lang: string;
+		signal: AbortSignal;
+		onToken?(text: string): void;
+		onProgress?(p: AssistantProgress): void;
+	}): Promise<{ text: string; calls: AssistantToolCall[] }>;
+	/** Rewrite text; may stream with onToken. Resolves with the whole result. */
+	rewrite?(req: {
+		text: string;
+		/** The action's id. */
+		task: AssistantTask;
+		/** The action's instruction, e.g. "Make the text shorter…". */
+		instruction: string;
+		lang: string;
+		signal: AbortSignal;
+		onToken?(text: string): void;
+		onProgress?(p: AssistantProgress): void;
+	}): Promise<string>;
+}
+
+/**
+ * Lets a plugin add to the image dialog (the assistant's Suggest a
+ * description). Called each time the dialog opens.
+ */
+export type ImageDialogHook = (ctx: {
+	editor: Editor;
+	src: HTMLInputElement;
+	alt: HTMLInputElement;
+	/** Untick "Decorative" and enable the alt field. */
+	setDescribed(): void;
+}) => ImageDialogAddition | void;
+
+export interface ImageDialogAddition {
+	/** Shown under the alt text field. */
+	field?: HTMLElement;
+	/** Run when the dialog was opened asking for it (exec('image', { suggest: true })). */
+	start?(): void;
+	/** The dialog closed. */
+	close?(): void;
+}
+
 export interface ReadAloudOptions {
 	/** A voice name from speechSynthesis.getVoices(); default: one for the content's language. */
 	voice?: string;
@@ -174,6 +281,20 @@ export interface EditorOptions {
 	 * Off by default; true turns it on, or give a voice name and rate.
 	 */
 	readAloud?: boolean | ReadAloudOptions;
+	/**
+	 * An AI assistant: "Suggest a description" for images and an Assistant
+	 * menu for text. Off by default. See BlockFusion.httpAssistant for a
+	 * server, or the blockfusion-ai extension for a model in the browser.
+	 */
+	assistant?: AssistantProvider;
+	/**
+	 * One-shot actions offered on the selection or paragraph (the Assistant
+	 * menu, or quick buttons in the chat). Default: improve, fix, shorten,
+	 * simplify. An empty list turns them off.
+	 */
+	assistantActions?: AssistantAction[];
+	/** Offer a chat that can change the page, when the provider can chat. Default false. */
+	assistantChat?: boolean;
 	/**
 	 * Columns in the site's grid when it isn't built with the converter's
 	 * default (12), e.g. 24 for a fusionCSS or Bootstrap build with

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>BlockFusion AI demo</title>
+	<link rel="stylesheet" href="../dist/blockfusion.css">
+	<style>
+		:root { color-scheme: light dark; }
+		* { box-sizing: border-box; }
+		body { margin: 0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: Canvas; color: CanvasText; }
+		main { max-width: 1600px; margin: 0 auto; padding: 16px; }
+		h1 { font-size: 20px; margin: 0 0 8px; }
+		h2 { font-size: 17px; margin: 0 0 8px; }
+		.hint { margin: 0 0 12px; max-width: 80ch; }
+		.how { margin-top: 24px; padding-top: 16px; border-top: 1px solid color-mix(in srgb, CanvasText 25%, Canvas); }
+		.how ul { margin: 0 0 12px; padding-left: 1.4em; max-width: 80ch; }
+		.how li { margin-bottom: 4px; }
+	</style>
+</head>
+<body>
+	<main>
+		<h1>BlockFusion AI demo</h1>
+		<p class="hint">Open <strong>Assistant</strong> and ask “add a row with 3 columns”, then “in row 2 column 1 write a short welcome”. Or select the image, use the image button and <strong>Suggest a description</strong>. Everything can be undone.</p>
+		<textarea id="content" name="content" hidden>
+<div class="row"><div class="span-t12"><h2>Our new garden</h2><p>We has planted lots of different kinds of flowers in the garden this year and they is growing really very well indeed, much better then last year when it was to dry.</p><p><img src="test-image.png" alt="" width="128"></p></div></div>
+		</textarea>
+
+		<section class="how" aria-labelledby="how-title">
+			<h2 id="how-title">How it works</h2>
+			<ul>
+				<li>The assistant runs in this browser with small open models: Florence-2-base (MIT) describes images, and Qwen3-0.6B (Apache-2.0) does the quick text actions and the chat, so it downloads once. Nothing leaves the device.</li>
+				<li>The first use of each feature downloads its model (about 275–570 MB), which the browser then caches. The chat needs WebGPU to be quick.</li>
+				<li>The chat sees an outline of the page and can add rows, write into columns and type at the cursor. Small models make mistakes, so each request's changes can be undone from the chat.</li>
+				<li>The page's models, quick actions and chat are all set by the app (see this page's source); the editor offers only what it's given.</li>
+				<li>Columns sit side by side from fusionCSS's medium width (992px) up; on a narrower editing area, with a side panel open on a small screen, say, they stack.</li>
+			</ul>
+			<h2>Running it</h2>
+			<ul>
+				<li>Build the extension (<code>npm --prefix extensions/ai install &amp;&amp; npm --prefix extensions/ai run build</code>) and serve this page over http://localhost (<code>npm run demo</code>).</li>
+				<li>To use a server instead, run <code>examples/assistant-server/server.mjs</code> with an OpenAI-compatible model server, and open this page with <code>?server=http://localhost:8787/assistant</code>.</li>
+			</ul>
+		</section>
+	</main>
+	<script src="../dist/blockfusion.js"></script>
+	<!-- The assistant is its own file; it registers itself with the editor -->
+	<script src="../dist/blockfusion-assistant.js"></script>
+	<script type="module">
+		import { localAssistant } from '../extensions/ai/dist/blockfusion-ai.mjs';
+		// ?server=URL uses a server (examples/assistant-server); otherwise models run in this browser
+		const server = new URLSearchParams(location.search).get('server');
+		window.editor = BlockFusion.create(document.getElementById('content'), {
+			converter: 'fusioncss',
+			stylesheets: ['vendor/fusioncss.min.css', 'canvas.css'],
+			bodyClass: 'demo-pad',
+			defaultBlocks: false,
+			// The app chooses the models (each can be false), the one-shot actions and whether to chat
+			assistant: server
+				? BlockFusionAssistant.httpAssistant({ url: server, name: 'the example server', chat: true })
+				: localAssistant({
+						// One language model for the quick actions and the chat: one download
+						textModel: 'onnx-community/Qwen3-0.6B-ONNX',
+						chatModel: 'onnx-community/Qwen3-0.6B-ONNX',
+						imageModel: 'onnx-community/Florence-2-base-ft',
+					}),
+			assistantChat: true,
+			assistantActions: [
+				{ id: 'fix', label: 'Fix spelling and grammar', prompt: "Rewrite the text with every spelling, grammar and punctuation mistake corrected, including verb forms (we has → we have) and confused words (then/than, to/too, their/they're). Keep the wording otherwise the same." },
+				{ id: 'shorten', label: 'Make shorter', prompt: 'Make the text shorter and more direct. Keep the key points, facts and language.' },
+				{ id: 'friendly', label: 'Make it friendlier', prompt: 'Rewrite the text in a warm, friendly tone for a general audience. Keep the facts and language.' },
+				{ id: 'formal', label: 'Make it formal', prompt: 'Rewrite the text in a clear, formal, professional tone. Keep the facts and language.' },
+			],
+			label: 'Page content',
+		});
+	</script>
+</body>
+</html>

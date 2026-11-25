@@ -12,8 +12,16 @@ import { siteThemePlugin } from './site-theme';
 import { sourcePlugin } from './source';
 import { structurePlugin } from './structure';
 
+/** Plugins added for every editor created afterwards (add-on bundles register here). */
+const registered: Plugin[] = [];
+
+/** Add a plugin to every editor created from now on. */
+export function registerPlugin(plugin: Plugin): void {
+	if (!registered.some((p) => p.id === plugin.id)) registered.push(plugin);
+}
+
 export function builtinPlugins(opts: EditorOptions): Plugin[] {
-	return [historyPlugin, formattingPlugin, insertPlugin, dictationPlugin(opts), readAloudPlugin(opts), blocksPlugin(opts), structurePlugin, siteThemePlugin, sourcePlugin, checkerPlugin, helpPlugin];
+	return [historyPlugin, formattingPlugin, insertPlugin, dictationPlugin(opts), readAloudPlugin(opts), ...registered, blocksPlugin(opts), structurePlugin, siteThemePlugin, sourcePlugin, checkerPlugin, helpPlugin];
 }
 
 export { blocksPlugin, checkerPlugin, dictationPlugin, readAloudPlugin, formattingPlugin, helpPlugin, historyPlugin, insertPlugin, siteThemePlugin, sourcePlugin, structurePlugin };

@@ -21,6 +21,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the design.
 - [Blocks](#blocks)
 - [Dictation](#dictation)
 - [Read aloud](#read-aloud)
+- [AI assistant](#ai-assistant)
 - [Media provider](#media-provider)
 - [Plugins](#plugins)
 - [Accessibility](#accessibility)
@@ -130,10 +131,10 @@ The default toolbar ids are:
 
 ```
 undo redo | block font size | bold italic underline strike subscript superscript color clear |
-ul ol outdent indent quote | alignLeft alignCenter alignRight alignJustify | link image dictate readAloud | blocks addRow addRaw width colorMode |
+ul ol outdent indent quote | alignLeft alignCenter alignRight alignJustify | link image dictate readAloud assistant | blocks addRow addRaw width colorMode |
 source check help
 
-`colorMode` only appears when the editor knows how the site switches light and dark.
+`colorMode` only appears when the editor knows how the site switches light and dark, and `blocks` (with the canvas's Add block button) only when blocks are set up: the built-in ones, the `blocks` option or `blocksUrl` (shown straight away, while it loads), or blocks added with `addBlocks()`.
 ```
 
 ## API
@@ -163,6 +164,8 @@ editor.on('selectionchange', ({ rowId, colId }) => {});
 editor.on('converterchange', ({ id }) => {});
 editor.on('colormodechange', ({ mode }) => {});
 editor.on('sitethemechange', ({ available }) => {});
+
+BlockFusion.use(plugin);                // add a plugin to every editor created from now on
 ```
 
 Global helpers on `BlockFusion` include:
@@ -405,6 +408,59 @@ BlockFusion.create(el, { readAloud: { voice: 'Karen', rate: 1.1 } }); // a voice
 ```
 
 It uses the browser's own speech (`speechSynthesis`), so nothing is downloaded. The voice follows the content's language; most system voices speak on the device, though some browsers also offer online voices.
+
+## AI assistant
+
+An optional assistant. The app decides what it offers: which models, which one-shot actions, and whether to chat.
+
+It lives in its own file, so a page that doesn't use AI downloads none of it (no code in `blockfusion.js`, no styles in `blockfusion.css`):
+
+```html
+<script src="blockfusion.js"></script>
+<script src="blockfusion-assistant.js"></script>  <!-- registers itself; global BlockFusionAssistant -->
+```
+
+As modules: `import { assistantPlugin, httpAssistant } from './blockfusion-assistant.mjs'`, then `BlockFusion.use(assistantPlugin)` or pass it in `plugins`.
+
+Everything is in the **Assistant** menu (sparkle icon): **Chat…**, the one-shot actions, and **Describe the selected image…**.
+
+- **Images:** the image dialog gets **Suggest a description**, which fills in the alt text for the author to check and edit; **Describe the selected image…** opens it for the selected image and starts straight away.
+- **One-shot actions** on the selection or the paragraph the cursor is in. The suggestion streams into a dialog, where the author can edit it; **Replace text** applies it as one undo step, keeping the paragraph's element and attributes. Only plain text goes to the assistant, so inline formatting within the replaced text isn't kept.
+- **Chat** (`assistantChat: true`): **Chat…** (or Mod+Alt+A) opens a side panel to talk to the assistant and have it change the page: "add a row with 3 columns", "in row 2 column 1 write a short welcome". The model sees an outline of the page (rows, columns, the start of their text, the cursor) and can add rows, write into columns and type at the cursor; there's no delete. Each change is an undo step, and the latest request's changes have an Undo button in the chat. A request stops when the model says it's done, repeats itself, or after six rounds.
+
+```js
+BlockFusion.create(el, {
+	assistant: provider,                  // required; see below
+	assistantChat: true,                  // default false
+	assistantActions: [                   // default: improve, fix, shorten, simplify; [] for none
+		{ id: 'shorten', label: 'Make shorter', prompt: 'Make the text shorter and more direct. Keep the key points, facts and language.' },
+		{ id: 'friendly', label: 'Make it friendlier', prompt: 'Rewrite the text in a warm, friendly tone. Keep the facts and language.' },
+	],
+});
+```
+
+The `prompt` is the instruction the provider gets with the text. `BlockFusionAssistant.DEFAULT_ASSISTANT_ACTIONS` has the defaults.
+
+It's off by default. Give an `assistant` provider:
+
+```js
+// In the browser, with small open models (extensions/ai); each model is configurable, or false
+import { localAssistant } from './blockfusion-ai/blockfusion-ai.mjs';
+BlockFusion.create(el, { assistant: localAssistant({ chatModel: 'onnx-community/Qwen3-0.6B-ONNX' }), assistantChat: true });
+
+// On your own server
+BlockFusion.create(el, { assistant: BlockFusionAssistant.httpAssistant({ url: '/assistant', chat: true, headers: { 'X-CSRF-Token': token } }), assistantChat: true });
+```
+
+`httpAssistant` POSTs JSON to the URL:
+
+- `{ "task": "describe-image", "lang", "src", "image" }` (`image` is a data URL when the editor can read the file);
+- `{ "task": "rewrite", "action", "instruction", "lang", "text" }`;
+- `{ "task": "chat", "lang", "context", "tools", "messages" }`, only with `chat: true`.
+
+The reply is JSON `{ "text": "…" }` or plain text, which may be streamed; a chat reply is JSON `{ "text", "calls": [{ "name", "arguments" }] }`. `examples/assistant-server/server.mjs` is a dependency-free Node example that passes jobs to any OpenAI-compatible model server (Ollama, llama.cpp, LM Studio), using its tool calling for chat.
+
+A provider is any object with `describeImage(req)`, `rewrite(req)` and/or `chat(req)` (see `AssistantProvider` in `src/types.ts`); the editor offers only what it has. `demo/ai.html` tries the in-browser models, or a server with `?server=`.
 
 ## Media provider
 

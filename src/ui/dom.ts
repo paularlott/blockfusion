@@ -34,7 +34,11 @@ export function hIn(doc: Document, tag: string, props: Props = {}, ...children: 
 
 let seq = 0;
 export function nextId(prefix = 'bf'): string {
-	return `${prefix}-${++seq}`;
+	// One counter for the page, so add-on bundles (blockfusion-assistant) never repeat an id
+	const g = globalThis as { __bfIdSeq?: number };
+	g.__bfIdSeq = Math.max(g.__bfIdSeq ?? 0, seq) + 1;
+	seq = g.__bfIdSeq;
+	return `${prefix}-${seq}`;
 }
 
 export const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);

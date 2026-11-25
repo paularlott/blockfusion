@@ -1,10 +1,12 @@
 /** Insert or edit an image: media provider, upload, or URL and alt text. */
 import { applyImage } from '../../commands/text';
 import type { Editor } from '../../editor';
+import type { ImageDialogAddition } from '../../types';
 import { checkbox, field, input, openDialog } from '../dialog';
 import { h } from '../dom';
 
-export async function imageDialog(editor: Editor): Promise<void> {
+/** `suggest`: start Suggest a description as soon as the dialog opens. */
+export async function imageDialog(editor: Editor, opts: { suggest?: boolean } = {}): Promise<void> {
 	if (!editor.canvas.selectionCol) {
 		editor.announce('Place the cursor in a text column first');
 		return;
@@ -68,13 +70,29 @@ export async function imageDialog(editor: Editor): Promise<void> {
 		tools.append(h('label', { for: file.id, className: 'bf-label' }, 'Upload a file'), file);
 	}
 	if (tools.childNodes.length) body.push(tools);
+	const altField = field('Alternative text', alt, 'Describe the image for people who cannot see it.');
+	body.push(altField);
+	// Plugins add their own fields (the assistant's Suggest a description)
+	const hooks = editor.imageDialogHooks
+		.map((hook) =>
+			hook({
+				editor,
+				src,
+				alt,
+				setDescribed: () => {
+					decorative.input.checked = false;
+					sync();
+				},
+			}),
+		)
+		.filter((x): x is ImageDialogAddition => !!x);
+	for (const x of hooks) if (x.field) body.push(x.field);
 	body.push(
-		field('Alternative text', alt, 'Describe the image for people who cannot see it.'),
 		decorative.wrap,
 		field('Width in pixels (optional)', width),
 	);
 
-	await openDialog(editor.root, {
+	const done = openDialog(editor.root, {
 		title: existing ? 'Edit image' : 'Add image',
 		body,
 		submitLabel: existing ? 'Save image' : 'Add image',
@@ -91,4 +109,7 @@ export async function imageDialog(editor: Editor): Promise<void> {
 			editor.announce(existing ? 'Image updated' : 'Image added');
 		},
 	});
+	if (opts.suggest) for (const x of hooks) x.start?.();
+	await done;
+	for (const x of hooks) x.close?.();
 }

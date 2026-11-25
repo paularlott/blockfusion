@@ -47,8 +47,24 @@ export const blocksPlugin = (opts: { blocks?: Block[]; blocksUrl?: string; defau
 			shortcut: 'Mod+Alt+B',
 			run: (ed) => ed.togglePanel('blocks'),
 			isActive: (ed) => ed.openPanel === 'blocks',
+			isEnabled: (ed) => hasBlocks(ed),
 		});
-		editor.addToolbarItem({ type: 'button', id: 'blocks', command: 'blocks', toggle: true, text: 'Blocks' });
+		// Blocks are offered when the page has some set up (built-in, the blocks
+		// option, blocksUrl even while it loads) or adds them later
+		const hasBlocks = (ed: Editor) => ed.blocks.length > 0 || !!opts.blocksUrl;
+		const item = { type: 'button', id: 'blocks', command: 'blocks', toggle: true, text: 'Blocks' } as const;
+		let shown = hasBlocks(editor);
+		if (shown) editor.addToolbarItem(item);
+		const syncButton = () => {
+			const want = hasBlocks(editor);
+			if (want === shown) return;
+			shown = want;
+			if (want) editor.addToolbarItem(item, { before: 'addRow' });
+			else {
+				if (editor.openPanel === 'blocks') editor.closePanel();
+				editor.removeToolbarItem('blocks');
+			}
+		};
 
 		let refresh = () => {};
 		editor.addPanel({
@@ -110,6 +126,10 @@ export const blocksPlugin = (opts: { blocks?: Block[]; blocksUrl?: string; defau
 				refresh();
 			},
 		});
-		return editor.on('blockschange', () => refresh());
+		return editor.on('blockschange', () => {
+			refresh();
+			syncButton();
+			editor.canvas.updateAddBar();
+		});
 	},
 });
