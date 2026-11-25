@@ -69,6 +69,8 @@ describe('column count', () => {
 		expect(names16).toContain('Two halves');
 		expect(names16).not.toContain('Three thirds');
 		expect(layoutsFor(24).find((l) => l.name === 'Three thirds')?.spans).toEqual([8, 8, 8]);
+		expect(layoutsFor(16).find((l) => l.name === 'Wide centre, narrow sides')?.spans).toEqual([4, 8, 4]);
+		expect(layoutsFor(12).map((l) => l.name)).toHaveLength(9);
 	});
 
 	it('reads a block grid size from JSON', () => {

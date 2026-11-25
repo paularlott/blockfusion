@@ -70,7 +70,7 @@ Normal form posts therefore just work. On any other element, its current HTML be
 
 - **WYSIWYG canvas.** It's a same-origin iframe that loads your `stylesheets` and `bodyClass`, so the content looks exactly as it does on the site. The toolbar, panels and dialogs sit outside it, styled by `blockfusion.css` and prefixed `bf-`.
 - **Rows and columns.**
-  - Add a row with a layout picker: 1, 1/2+1/2, 1/3×3, 1/4×4, 2/3+1/3, 1/3+2/3, or custom spans such as `3 6 3` or `1/4 3/4`.
+  - Add a row with a layout picker: 1, 1/2+1/2, 1/3×3, 1/4×4, 2/3+1/3, 1/3+2/3, 3/4+1/4, 1/4+3/4, or a wide centre with narrow sides (1/4+1/2+1/4). Columns can be added, removed and resized afterwards, and exact spans set in column settings.
   - Add, remove, move, resize, duplicate and delete rows and columns.
   - Row and column settings: class, id, element, background, inline style, custom attributes, and spans per breakpoint.
 - **Blocks.** A library panel with search and categories. A block is one or more rows, given as neutral rows or as HTML for any known framework. Inserting a block converts it to the active framework.
