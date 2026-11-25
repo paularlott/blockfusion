@@ -9,6 +9,8 @@ export interface CodeDialogOptions {
 	value: string;
 	description?: string;
 	submitLabel?: string;
+	/** Extra fields shown above the code (e.g. a layout choice). */
+	extra?: HTMLElement;
 }
 
 /** Edit code with the configured code editor. Resolves with the new code, or null. */
@@ -23,7 +25,7 @@ export function codeDialog(editor: Editor, opts: CodeDialogOptions): Promise<str
 	const done = openDialog(editor.root, {
 		title: opts.title,
 		description: opts.description,
-		body: wrap,
+		body: opts.extra ? [opts.extra, wrap] : wrap,
 		wide: true,
 		submitLabel: opts.submitLabel ?? 'Save',
 		onSubmit: () => {

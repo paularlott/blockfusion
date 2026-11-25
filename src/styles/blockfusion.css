@@ -861,3 +861,21 @@
 .bf-contrast[data-state='warn'] {
 	color: var(--bf-fg);
 }
+
+/* Radio choices with a hint under each label */
+.bf-choices {
+	display: grid;
+	gap: 8px;
+}
+.bf-choice {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+}
+.bf-choice > .bf-radio {
+	margin-top: 1px;
+}
+.bf-choice label {
+	font-weight: 600;
+	color: var(--bf-fg);
+}

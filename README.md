@@ -83,7 +83,9 @@ Normal form posts therefore just work. On any other element, its current HTML be
   - Clear formatting, and an HTML source view.
   - Paste cleaning that strips Word and Google Docs markup.
 - **Raw HTML/JavaScript** rows and columns.
-  - **Add HTML** in the toolbar adds a code row. **Add HTML column…** (row menu) and **Add HTML column after…** (column menu) add a code column inside a row, and **Convert to HTML code** turns a text column into one, keeping its place and width.
+  - **Add HTML** asks for the layout: **In a row and column** (the default) follows the page grid like any other row and can take more columns; **Custom row** writes only the code, with no row or column markup.
+  - The row menu switches between the two: **Make custom HTML row** on a row whose only column is code, **Wrap in row and column** on a custom row. When the row or column has its own class, id, style or attributes, they go into the custom row's code so the page doesn't change.
+  - **Convert to HTML code** (column menu) turns a text column into a code column, keeping its place and width. To add a code column, add a column and convert it.
   - Saving empty code removes the code row or column.
   - They're written to the output verbatim.
   - In the canvas they show as a labelled placeholder with a sandboxed preview, so scripts never run in the editor.

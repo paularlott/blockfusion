@@ -700,6 +700,10 @@ export class Editor {
 		if (t.kind === 'col') {
 			if (!this.canvas.focusCol(t.id, t.atStart)) this.canvas.focusHandle('col', t.id);
 		} else this.canvas.focusHandle(t.kind === 'row-handle' ? 'row' : 'col', t.id);
+		// Make it the current row and column even if no focus event follows
+		// (a closing dialog can hand focus back elsewhere first).
+		const el = t.kind === 'col' ? (this.canvas.content(t.id) ?? this.canvas.handleEl('col', t.id)) : this.canvas.handleEl(t.kind === 'row-handle' ? 'row' : 'col', t.id);
+		if (el) this.onCanvasFocus(el);
 	}
 
 	renderCanvas(): void {

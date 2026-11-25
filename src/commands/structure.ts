@@ -6,6 +6,8 @@
 import type { Editor } from '../editor';
 import {
 	addCol,
+	clone,
+	columnsOf,
 	createRawRow,
 	createRow,
 	duplicateCol,
@@ -21,7 +23,7 @@ import {
 	rowIndex,
 	spanAt,
 } from '../model/doc';
-import type { Doc } from '../model/types';
+import type { Doc, Row } from '../model/types';
 
 export type InsertAt = { at: 'end' } | { at: 'before' | 'after'; rowId: string };
 
@@ -42,12 +44,59 @@ export function insertRow(editor: Editor, spans: number[], where: InsertAt): voi
 	});
 }
 
-export function insertRaw(editor: Editor, code: string, where: InsertAt): void {
-	const row = createRawRow(code);
+/**
+ * Insert HTML code as a row. 'grid' puts it in a row and a full width
+ * column like any other row, so it follows the page grid and can take more
+ * columns; 'custom' writes only the code, with no row or column markup.
+ */
+export function insertRaw(editor: Editor, code: string, where: InsertAt, layout: 'grid' | 'custom' = 'grid'): void {
+	let row: Row;
+	if (layout === 'custom') row = createRawRow(code);
+	else {
+		row = createRow([editor.columns], editor.options.breakpoint, code, editor.columns);
+		row.cols[0].kind = 'raw';
+	}
 	editor.apply('Insert HTML', (d) => insertRows(d, [row], insertIndex(d, where)), {
 		focus: { kind: 'row-handle', id: row.id },
-		announce: (d) => `HTML row inserted, ${position(d, row.id)}`,
+		announce: (d) => `${layout === 'custom' ? 'Custom HTML row' : 'HTML row'} inserted, ${position(d, row.id)}`,
 	});
+}
+
+/** A custom HTML row becomes a row and column holding the same code. */
+export function wrapRawRow(editor: Editor, rowId: string): void {
+	editor.apply(
+		'Wrap in row and column',
+		(d) => {
+			const i = rowIndex(d, rowId);
+			const row = d.rows[i];
+			if (!row || row.kind !== 'raw') return false;
+			const next = createRow([columnsOf(d)], 'base', row.raw ?? '', columnsOf(d));
+			next.id = row.id;
+			next.cols[0].kind = 'raw';
+			d.rows[i] = next;
+		},
+		{ focus: { kind: 'row-handle', id: rowId }, announce: 'HTML is now in a row and column' },
+	);
+}
+
+/**
+ * A row whose only column is HTML code becomes a custom HTML row. When the
+ * row or column has its own class, id, style or attributes, their markup
+ * goes into the code so the page output doesn't change.
+ */
+export function unwrapRawRow(editor: Editor, rowId: string): void {
+	editor.apply(
+		'Make custom HTML row',
+		(d) => {
+			const i = rowIndex(d, rowId);
+			const row = d.rows[i];
+			if (!row || row.kind !== 'grid' || row.cols.length !== 1 || row.cols[0].kind !== 'raw') return false;
+			const col = row.cols[0];
+			const code = row.attrs || col.attrs ? editor.converter.render({ rows: [clone(row)], columns: columnsOf(d) }, { rawMarkers: false }) : col.html;
+			d.rows[i] = { id: row.id, kind: 'raw', cols: [], raw: code };
+		},
+		{ focus: { kind: 'row-handle', id: rowId }, announce: 'Now a custom HTML row, without row and column markup' },
+	);
 }
 
 export function moveRowBy(editor: Editor, rowId: string, delta: number): void {
@@ -130,33 +179,6 @@ export function convertColToCode(editor: Editor, colId: string): void {
 		},
 		{ focus: { kind: 'col-handle', id: colId }, announce: 'Column converted to HTML code' },
 	);
-}
-
-/** Add an HTML code column holding `code`, after (or before) a column, or at the row's end. */
-export function addRawColCmd(editor: Editor, rowId: string, code: string, nextToColId?: string, side: 'after' | 'before' = 'after'): void {
-	let id = '';
-	editor.apply(
-		'Add HTML column',
-		(d) => {
-			const row = findRow(d, rowId);
-			if (!row || row.kind !== 'grid') return false;
-			const at = nextToColId ? row.cols.findIndex((c) => c.id === nextToColId) : -1;
-			const i = at < 0 ? row.cols.length : side === 'before' ? at : at + 1;
-			const col = addCol(d, rowId, i, editor.options.breakpoint);
-			if (!col) return false;
-			col.kind = 'raw';
-			col.html = code;
-			id = col.id;
-		},
-		{
-			focus: () => ({ kind: 'col-handle', id }),
-			announce: (d) => {
-				const ref = findCol(d, id)!;
-				return `HTML column added, column ${ref.colIndex + 1} of ${ref.row.cols.length}`;
-			},
-		},
-	);
-	if (!id) editor.announce(`A row can have at most ${editor.columns} columns`);
 }
 
 export function deleteColCmd(editor: Editor, colId: string): void {

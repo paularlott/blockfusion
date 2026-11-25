@@ -4,8 +4,9 @@
  */
 import {
 	addColCmd,
-	addRawColCmd,
 	convertColToCode,
+	unwrapRawRow,
+	wrapRawRow,
 	deleteColCmd,
 	deleteRowCmd,
 	duplicateColCmd,
@@ -20,6 +21,7 @@ import {
 import type { Editor } from '../editor';
 import { findCol, findRow, spanAt } from '../model/doc';
 import type { HandleAction, Plugin } from '../types';
+import { h, nextId } from '../ui/dom';
 import { codeDialog } from '../ui/dialogs/code';
 import { layoutDialog } from '../ui/dialogs/layout';
 import { settingsDialog } from '../ui/dialogs/settings';
@@ -37,27 +39,34 @@ async function addRowFlow(editor: Editor, where: InsertAt, title?: string): Prom
 	if (spans) insertRow(editor, spans, where);
 }
 
+/** A radio with a label and a hint under it, for a small choice in a dialog. */
+function radioChoice(name: string, value: string, label: string, hint: string, checked: boolean): { wrap: HTMLElement; input: HTMLInputElement } {
+	const id = nextId('bf-rc');
+	const hintId = `${id}-hint`;
+	const input = h('input', { type: 'radio', className: 'bf-radio', name, value, id, checked, 'aria-describedby': hintId });
+	const wrap = h(
+		'div',
+		{ className: 'bf-choice' },
+		input,
+		h('div', {}, h('label', { for: id }, label), h('p', { className: 'bf-hint', id: hintId }, hint)),
+	);
+	return { wrap, input };
+}
+
 async function addRawFlow(editor: Editor, where: InsertAt): Promise<void> {
+	const name = nextId('bf-rawlayout');
+	const grid = radioChoice(name, 'grid', 'In a row and column', 'Follows the page grid like any other row, and can have more columns added.', true);
+	const custom = radioChoice(name, 'custom', 'Custom row', 'Only your code, with no row or column markup around it.', false);
+	const layout = h('fieldset', { className: 'bf-fieldset bf-choices' }, h('legend', { className: 'bf-label' }, 'Layout'), grid.wrap, custom.wrap);
 	const code = await codeDialog(editor, {
 		title: 'Add HTML or JavaScript',
 		label: 'Code',
 		value: '',
 		description: 'The code is written to the page exactly as entered. Scripts do not run in the editor; use Preview to try them safely.',
 		submitLabel: 'Add',
+		extra: layout,
 	});
-	if (code !== null) insertRaw(editor, code, where);
-}
-
-/** Ask for code, then add it as an HTML column next to a column (or at the row's end). */
-async function addRawColFlow(editor: Editor, rowId: string, colId?: string): Promise<void> {
-	const code = await codeDialog(editor, {
-		title: 'Add HTML column',
-		label: 'Code',
-		value: '',
-		description: 'The code is written to the page exactly as entered, inside a column of this row. Scripts do not run in the editor; use Preview to try them safely.',
-		submitLabel: 'Add',
-	});
-	if (code !== null && code.trim()) addRawColCmd(editor, rowId, code, colId, 'after');
+	if (code !== null) insertRaw(editor, code, where, custom.input.checked ? 'custom' : 'grid');
 }
 
 /** Where new rows go: after the active row, else at the end. */
@@ -157,8 +166,13 @@ export const structurePlugin: Plugin = {
 		});
 		rowAct({ id: '---1', label: '', run: () => {} });
 		rowAct({ id: 'row-edit-code', label: 'Edit code…', visible: isRaw, run: (ed, r) => ed.editRaw(r.rowId) });
+		rowAct({ id: 'row-wrap', label: 'Wrap in row and column', visible: isRaw, run: (ed, r) => wrapRawRow(ed, r.rowId) });
+		const isOneCodeCol = (ed: Editor, r: { rowId: string }) => {
+			const row = findRow(ed.doc, r.rowId);
+			return row?.kind === 'grid' && row.cols.length === 1 && row.cols[0].kind === 'raw';
+		};
+		rowAct({ id: 'row-unwrap', label: 'Make custom HTML row', visible: isOneCodeCol, run: (ed, r) => unwrapRawRow(ed, r.rowId) });
 		rowAct({ id: 'row-add-col', label: 'Add column', visible: isGrid, disabled: (ed, r) => (findRow(ed.doc, r.rowId)?.cols.length ?? ed.columns) >= ed.columns, run: (ed, r) => addColCmd(ed, r.rowId) });
-		rowAct({ id: 'row-add-raw-col', label: 'Add HTML column…', visible: isGrid, disabled: (ed, r) => (findRow(ed.doc, r.rowId)?.cols.length ?? ed.columns) >= ed.columns, run: (ed, r) => addRawColFlow(ed, r.rowId) });
 		rowAct({ id: 'row-above', label: 'Insert row above…', run: (ed, r) => addRowFlow(ed, { at: 'before', rowId: r.rowId }, 'Insert row above') });
 		rowAct({ id: 'row-below', label: 'Insert row below…', run: (ed, r) => addRowFlow(ed, { at: 'after', rowId: r.rowId }, 'Insert row below') });
 		rowAct({ id: 'row-dup', label: 'Duplicate row', shortcut: 'Mod+D', run: (ed, r) => duplicateRowCmd(ed, r.rowId) });
@@ -204,7 +218,6 @@ export const structurePlugin: Plugin = {
 		const full = (ed: Editor, r: { rowId: string }) => (findRow(ed.doc, r.rowId)?.cols.length ?? ed.columns) >= ed.columns;
 		colAct({ id: 'col-add-before', label: 'Add column before', disabled: full, run: (ed, r) => addColCmd(ed, r.rowId, r.colId, 'before') });
 		colAct({ id: 'col-add', label: 'Add column after', disabled: full, run: (ed, r) => addColCmd(ed, r.rowId, r.colId, 'after') });
-		colAct({ id: 'col-add-raw', label: 'Add HTML column after…', disabled: full, run: (ed, r) => addRawColFlow(ed, r.rowId, r.colId) });
 		colAct({ id: 'col-dup', label: 'Duplicate column', shortcut: 'Mod+D', run: (ed, r) => duplicateColCmd(ed, r.colId!) });
 		colAct({
 			id: 'col-to-raw',
