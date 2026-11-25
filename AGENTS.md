@@ -32,9 +32,10 @@ built `dist/`, so rebuild before checking anything in a browser.
 - **The canvas is a same-origin iframe** carrying the site's own stylesheets, so content looks
   as it will on the site. Selection lives in the iframe document. Use `canvas.range` (saved
   on selectionchange, so it survives a dialog taking focus) and `canvas.restoreSelection()`.
-- **Plugins** register commands, toolbar items and menu items through the editor API
-  (`registerCommand`, `addToolbarItem`, and `addHandleAction` for the row and column menus). Built-in features are
-  plugins too (`src/plugins`). Add a feature as a plugin, not by special-casing the editor.
+- **Plugins** register commands, toolbar items and menu items through the editor API:
+  `registerCommand`, `addToolbarItem`, and `addHandleAction` for the row and column menus.
+  Built-in features are plugins too (`src/plugins`). Add a feature as a plugin, not by
+  special-casing the editor.
 - **The media provider** (`editor.media`) is optional. Every file-picking feature must still
   work with a typed URL when it's absent.
 
