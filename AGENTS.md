@@ -18,10 +18,13 @@ built `dist/`, so rebuild before checking anything in a browser.
 ## How the editor is put together
 
 - **Neutral model is the source of truth** (`src/model`): a `Doc` of rows, each with columns
-  and their spans (base/sm/md/lg). Framework classes exist only at the edges: a converter
-  turns them into the neutral model on load (`parse`) and back on save (`render`). Never
-  store framework classes in the model, and never branch on the framework outside
+  and their spans (base/sm/md/lg/xl/xxl). Framework classes exist only at the edges: a
+  converter turns them into the neutral model on load (`parse`) and back on save (`render`).
+  Never store framework classes in the model, and never branch on the framework outside
   `src/converters`.
+- **Never assume 12 columns.** Spans count in the document's grid (`columnsOf(doc)`,
+  `editor.columns`). Pass the grid size to the span helpers, and rescale with `scaleSpan` /
+  `scaleRows` when content crosses grids.
 - **Every change goes through the history.** Structural changes use
   `editor.apply(label, draft => ...)`. Text changes use `editor.runText(label, (doc,
   content, colId) => ...)`, which restores the selection, normalises the content and records
@@ -60,6 +63,9 @@ There are two separate style layers. Don't mix them.
     can leak into the saved HTML.
 - Keep `forced-colors` and `prefers-reduced-motion` rules up to date for anything new in
   either layer.
+- The editor's `theme` and the site's colour mode are separate. The canvas iframe's
+  `color-scheme` is set from the site colour mode (`canvas.setColorMode`), so a dark editor
+  never darkens the page being edited.
 
 ## Accessibility (AA or better)
 

@@ -31,6 +31,7 @@ const P: Record<string, string> = {
 	handle: '<circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/>',
 	close: '<path d="M6 6l12 12M18 6 6 18"/>',
 	check: '<path d="m5 12 5 5 9-10"/>',
+	moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/>',
 	width: '<rect x="3" y="5" width="18" height="12" rx="1"/><path d="M8 21h8M12 17v4"/>',
 	chevron: '<path d="m7 10 5 5 5-5"/>',
 	search: '<circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/>',

@@ -38,7 +38,7 @@ interface Row   { id: string; kind: 'grid' | 'raw'; cols: Col[]; raw?: string;
                   attrs?: { className?: string; id?: string; style?: string; tag?: string } }
 interface Col   { id: string; kind: 'rich' | 'raw'; span: Span; html: string;
                   attrs?: { className?: string; style?: string } }
-interface Span  { base: number; sm?: number; md?: number; lg?: number }   // 1..12
+interface Span  { base: number; sm?; md?; lg?; xl?; xxl? }   // 1..Doc.columns (default 12)
 interface Block { id: string; name: string; category?: string; thumbnail?: string;
                   description?: string; rows: Row[] | string /* HTML in any known framework */ }
 ```

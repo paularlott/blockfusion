@@ -13,6 +13,7 @@ import { DEFAULT_COLUMNS, type Block, type Breakpoint, type Doc, type Row } from
 import { cleanPaste, textToHtml, type PasteFilter } from './paste/clean';
 import type {
 	CodeEditorFactory,
+	ColorMode,
 	Command,
 	EditorOptions,
 	HandleAction,
@@ -20,6 +21,7 @@ import type {
 	NamedValue,
 	Panel,
 	Plugin,
+	SiteTheme,
 	ToolbarItem,
 } from './types';
 import { normaliseContent, semanticInline } from './commands/text';
@@ -120,6 +122,10 @@ export class Editor {
 	activeCol: string | null = null;
 	selectedImage: HTMLImageElement | null = null;
 	isReady = false;
+	/** How the site switches light/dark, or null when the preview isn't available. */
+	siteTheme: SiteTheme | null = null;
+	/** The colour mode the canvas shows the site in. */
+	colorMode: ColorMode = 'light';
 
 	private target: HTMLElement;
 	private textarea: HTMLTextAreaElement | null = null;
@@ -212,6 +218,8 @@ export class Editor {
 		this.root.addEventListener('keydown', (e) => this.onChromeKeyDown(e));
 
 		for (const p of [...builtinPlugins(this.options), ...(opts.plugins ?? [])]) this.use(p);
+		this.colorMode = opts.colorMode === 'dark' ? 'dark' : 'light';
+		this.refreshSiteTheme();
 		this.toolbar.build(this.options.toolbar);
 
 		this.ready = this.canvas.ready.then(() => {
@@ -219,6 +227,8 @@ export class Editor {
 			this.canvas.setGridStylesheet(this.converter.stylesheet ?? '');
 			this.renderCanvas();
 			this.isReady = true;
+			// Stylesheets have loaded: prefers-color-scheme rules can be seen now
+			this.refreshSiteTheme();
 			this.syncTextarea();
 			this.emit('ready');
 		});
@@ -256,6 +266,34 @@ export class Editor {
 		this.history.record(label, before, next);
 		this.renderCanvas();
 		this.changed();
+	}
+
+	/**
+	 * Work out how the site switches light/dark: the siteTheme option, the
+	 * converter's convention, or prefers-color-scheme rules in the canvas
+	 * stylesheets. Emits 'sitethemechange' when that changes.
+	 */
+	refreshSiteTheme(): void {
+		const opt = this.options.siteTheme;
+		let next: SiteTheme | null;
+		if (opt === false) next = null;
+		else if (opt) next = opt;
+		else next = this.converter.siteTheme ?? (this.canvas?.usesColorSchemeMedia() ? 'media' : null);
+		const changed = next !== this.siteTheme;
+		this.siteTheme = next;
+		if (!next) this.colorMode = 'light';
+		this.canvas?.setColorMode(next, this.colorMode);
+		if (changed) this.emit('sitethemechange', { available: !!next });
+	}
+
+	/** Preview the site in light or dark mode (only the canvas; content is unchanged). */
+	setColorMode(mode: ColorMode): void {
+		if (!this.siteTheme || mode === this.colorMode) return;
+		this.colorMode = mode;
+		this.canvas.setColorMode(this.siteTheme, mode);
+		this.canvas.fitHeight();
+		this.toolbar.update();
+		this.emit('colormodechange', { mode });
 	}
 
 	/** Columns in the grid being edited (the converter's, 12 by default). */
@@ -296,6 +334,7 @@ export class Editor {
 		if (opts.stylesheets) this.setStylesheets(opts.stylesheets);
 		if (opts.bodyClass !== undefined) this.setBodyClass(opts.bodyClass);
 		this.canvas.setGridStylesheet(conv.stylesheet ?? '');
+		this.refreshSiteTheme();
 		this.renderCanvas();
 		this.announce(`Framework changed to ${conv.name}`);
 		this.emit('converterchange', { id });
@@ -399,6 +438,11 @@ export class Editor {
 
 	addToolbarItem(item: ToolbarItem, where?: { before?: string; after?: string }): void {
 		this.toolbar.add(item, where);
+		if (this.isReady) this.toolbar.build(this.options.toolbar);
+	}
+
+	removeToolbarItem(id: string): void {
+		this.toolbar.remove(id);
 		if (this.isReady) this.toolbar.build(this.options.toolbar);
 	}
 

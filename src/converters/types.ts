@@ -1,4 +1,5 @@
 import type { Breakpoint, Col, Doc, Row } from '../model/types';
+import type { SiteTheme } from '../types';
 
 export interface RenderOptions {
 	/**
@@ -33,6 +34,8 @@ export interface Converter {
 	 * compiled with 24 columns, say). Omit it when the grid size is fixed.
 	 */
 	withColumns?(columns: number): Converter;
+	/** How sites built with this framework usually switch light/dark, if they have a convention. */
+	siteTheme?: SiteTheme;
 	/** CSS the canvas needs for this framework's grid, if it is not a host stylesheet. */
 	stylesheet?: string;
 	/** 0..1 confidence that the markup under `root` was made for this framework. */

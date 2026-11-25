@@ -8,6 +8,7 @@ import type { Converter } from '../converters/types';
 import { escapeAttr } from '../converters/html';
 import type { Editor } from '../editor';
 import type { Col, Doc, Row } from '../model/types';
+import type { ColorMode, SiteTheme } from '../types';
 import { CANVAS_CSS } from './canvas-css';
 import { hIn } from './dom';
 import { icon } from './icons';
@@ -38,6 +39,8 @@ export class Canvas {
 	/** Last selection inside a column, restored before text commands. */
 	private savedRange: Range | null = null;
 	private resizeObs?: ResizeObserver;
+	private siteTheme: SiteTheme | null = null;
+	private colorMode: ColorMode = 'light';
 	private gridStyle!: HTMLStyleElement;
 
 	constructor(
@@ -47,6 +50,9 @@ export class Canvas {
 	) {
 		this.iframe = document.createElement('iframe');
 		this.iframe.className = 'bf-canvas';
+		// The canvas shows the site, not the editor theme: its colour scheme is
+		// set here, so a dark editor doesn't turn prefers-color-scheme sites dark.
+		this.iframe.style.colorScheme = 'light';
 		this.iframe.title = config.title;
 		this.iframe.srcdoc = this.srcdoc();
 		host.appendChild(this.iframe);
@@ -94,6 +100,7 @@ export class Canvas {
 		d.addEventListener('dragleave', (e) => (e.target as HTMLElement).closest?.('.bf-drop-target')?.classList.remove('bf-drop-target'));
 		d.addEventListener('drop', (e) => ed.onCanvasDrop(e));
 		d.addEventListener('pointerdown', () => ed.onCanvasPointerDown());
+		this.applyTheme();
 		if (typeof ResizeObserver !== 'undefined') {
 			this.resizeObs = new ResizeObserver(() => this.fitHeight());
 			this.resizeObs.observe(this.doc.documentElement);
@@ -122,7 +129,10 @@ export class Canvas {
 			const link = this.doc.createElement('link');
 			link.rel = 'stylesheet';
 			link.href = absolute(href);
-			link.addEventListener('load', () => this.fitHeight());
+			link.addEventListener('load', () => {
+				this.fitHeight();
+				this.editor.refreshSiteTheme();
+			});
 			this.doc.head.insertBefore(link, anchor);
 		}
 	}
@@ -130,6 +140,75 @@ export class Canvas {
 	setBodyClass(cls: string): void {
 		this.config.bodyClass = cls;
 		if (this.doc) this.doc.body.className = cls;
+		this.applyTheme();
+	}
+
+	/* ------------------------------------------------------- colour mode */
+
+	/** Show the site in a colour mode, using the site's own switch. */
+	setColorMode(theme: SiteTheme | null, mode: ColorMode): void {
+		if (this.doc && this.siteTheme && this.siteTheme !== theme) this.clearTheme(this.siteTheme);
+		this.siteTheme = theme;
+		this.colorMode = mode;
+		this.applyTheme();
+	}
+
+	private themeTarget(on?: 'html' | 'body'): HTMLElement {
+		return on === 'body' ? this.doc.body : this.doc.documentElement;
+	}
+
+	private applyTheme(): void {
+		const mode = this.colorMode;
+		// Drives prefers-color-scheme and light-dark() inside the canvas
+		this.iframe.style.colorScheme = mode;
+		const t = this.siteTheme;
+		if (!this.doc || !t || t === 'media') return;
+		if (typeof t === 'function') t(this.doc, mode);
+		else if ('attribute' in t) {
+			const el = this.themeTarget(t.on);
+			const v = mode === 'dark' ? (t.dark ?? 'dark') : t.light;
+			if (v === undefined) el.removeAttribute(t.attribute);
+			else el.setAttribute(t.attribute, v);
+		} else {
+			const el = this.themeTarget(t.on);
+			el.classList.toggle(t.className, mode === 'dark');
+			if (t.lightClassName) el.classList.toggle(t.lightClassName, mode === 'light');
+		}
+	}
+
+	private clearTheme(t: SiteTheme): void {
+		if (typeof t === 'function') t(this.doc, 'light');
+		else if (t !== 'media' && 'attribute' in t) this.themeTarget(t.on).removeAttribute(t.attribute);
+		else if (t !== 'media') {
+			this.themeTarget(t.on).classList.remove(t.className);
+			if (t.lightClassName) this.themeTarget(t.on).classList.remove(t.lightClassName);
+		}
+	}
+
+	/**
+	 * Whether the canvas stylesheets have prefers-color-scheme rules. Sheets
+	 * from another origin can't be read and are skipped.
+	 */
+	usesColorSchemeMedia(): boolean {
+		if (!this.doc) return false;
+		const scan = (rules: CSSRuleList): boolean => {
+			for (const r of Array.from(rules)) {
+				const media = (r as CSSMediaRule).media;
+				if (media && /prefers-color-scheme/.test(media.mediaText)) return true;
+				const inner = (r as CSSGroupingRule).cssRules;
+				if (inner && scan(inner)) return true;
+			}
+			return false;
+		};
+		for (const sheet of Array.from(this.doc.styleSheets)) {
+			if ((sheet.ownerNode as Element | null)?.id === 'bf-canvas-css') continue;
+			try {
+				if (scan(sheet.cssRules)) return true;
+			} catch {
+				/* cross-origin */
+			}
+		}
+		return false;
 	}
 
 	/* --------------------------------------------------------- rendering */

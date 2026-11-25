@@ -98,9 +98,38 @@ export interface NamedValue {
 	value: string;
 }
 
+/** A site colour mode to preview in the canvas. */
+export type ColorMode = 'light' | 'dark';
+
+/**
+ * How the site being edited switches between light and dark, so the canvas
+ * can preview both:
+ * - 'media': the site follows prefers-color-scheme (also covers light-dark()).
+ * - { attribute }: an attribute on <html> (or <body> with on: 'body'), e.g.
+ *   Bootstrap's data-bs-theme. `dark` defaults to "dark"; `light` is the
+ *   light value, or the attribute is removed when omitted.
+ * - { className }: a class present in dark mode (Tailwind's `dark`), with an
+ *   optional lightClassName for light mode.
+ * - a function that applies a mode to the canvas document itself.
+ */
+export type SiteTheme =
+	| 'media'
+	| { attribute: string; light?: string; dark?: string; on?: 'html' | 'body' }
+	| { className: string; lightClassName?: string; on?: 'html' | 'body' }
+	| ((doc: Document, mode: ColorMode) => void);
+
 export interface EditorOptions {
 	/** Converter id for output and editing. Default 'fusioncss'. */
 	converter?: string;
+	/**
+	 * How the site switches light/dark, for the canvas preview toggle.
+	 * Defaults to the converter's convention (Bootstrap 5 and 6 use
+	 * data-bs-theme), else 'media' when the site's stylesheets have
+	 * prefers-color-scheme rules. false turns the preview off.
+	 */
+	siteTheme?: SiteTheme | false;
+	/** Colour mode the canvas starts in. Default 'light'. */
+	colorMode?: ColorMode;
 	/**
 	 * Columns in the site's grid when it isn't built with the converter's
 	 * default (12), e.g. 24 for a fusionCSS or Bootstrap build with

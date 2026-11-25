@@ -89,7 +89,10 @@ Normal form posts therefore just work. On any other element, its current HTML be
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `converter` | `'fusioncss'` | Output and editing framework: `fusioncss`, `bootstrap3`, `bootstrap5`, `foundation5`, `foundation6`, `tailwind`, `cssgrid`, or any registered id. |
+| `converter` | `'fusioncss'` | Output and editing framework: `fusioncss`, `bootstrap3`, `bootstrap5`, `bootstrap6`, `foundation5`, `foundation6`, `tailwind`, `cssgrid`, or any registered id. |
+| `columns` | the converter's (12) | Columns in the site's grid, for a build with another count (fusionCSS `@numColumns`, Bootstrap `$grid-columns`, ...). See [Grid size](#grid-size). |
+| `siteTheme` | see [Site colour modes](#site-colour-modes) | How the site switches light/dark, so the canvas can preview both. `false` turns the preview off. |
+| `colorMode` | `'light'` | Colour mode the canvas starts in when the site has one. |
 | `stylesheets` | `[]` | Stylesheet URLs loaded into the canvas: theme CSS, framework CSS or a Tailwind build. |
 | `bodyClass` | `''` | Class for the canvas `<body>`, e.g. `container`. |
 | `canvasCss` | `''` | Extra CSS for the canvas, added after the stylesheets. |
@@ -101,8 +104,8 @@ Normal form posts therefore just work. On any other element, its current HTML be
 | `fonts` | four defaults | `[{ name, value }]` for the font menu. `value` is a CSS `font-family`. |
 | `fontSizes` | five defaults | `[{ name, value }]` for the size menu. `value` is a CSS length. |
 | `colors` | ten defaults | `[{ name, value }]` for the text colour menu. The defaults all have at least 4.5:1 contrast on white. |
-| `theme` | `'auto'` | `'auto'` follows a `data-theme="light\|dark"` attribute on an ancestor, then `prefers-color-scheme`. `'light'` or `'dark'` forces one. |
-| `breakpoint` | `'md'` | Breakpoint that new layouts and resizes apply to (`sm`, `md` or `lg`). Columns stack below it. |
+| `theme` | `'auto'` | The editor's own light/dark. `'auto'` follows a `data-theme="light\|dark"` attribute on an ancestor, then `prefers-color-scheme`. `'light'` or `'dark'` forces one. It doesn't change how the page being edited looks (see `siteTheme`). |
+| `breakpoint` | `'md'` | Breakpoint that new layouts and resizes apply to (`sm`, `md`, `lg`, `xl` or `xxl`). Columns stack below it. |
 | `height` | `'auto'` | `'auto'` grows the canvas with its content. Any CSS length fixes it and scrolls. |
 | `minHeight` | `'320px'` | Minimum canvas height in auto mode. |
 | `label` | `'Page editor'` | Accessible name of the editor region. |
@@ -116,8 +119,10 @@ The default toolbar ids are:
 
 ```
 undo redo | block font size | bold italic underline strike subscript superscript color clear |
-ul ol outdent indent quote | alignLeft alignCenter alignRight alignJustify | link image | blocks addRow addRaw width |
+ul ol outdent indent quote | alignLeft alignCenter alignRight alignJustify | link image | blocks addRow addRaw width colorMode |
 source check help
+
+`colorMode` only appears when the editor knows how the site switches light and dark.
 ```
 
 ## API
@@ -130,6 +135,8 @@ editor.setHTML(html);                   // any known framework, converted (undoa
 editor.getDoc(); editor.setDoc(doc);    // the neutral model
 editor.setConverter('bootstrap5', { stylesheets: [...], bodyClass: 'container' }); // re-renders
 editor.setStylesheets([...]); editor.setBodyClass('...'); editor.setTheme('dark');
+editor.setColorMode('dark');            // preview the site's dark mode (canvas only)
+editor.columns;                         // grid size being edited
 editor.undo(); editor.redo();
 editor.exec('bold');                    // run any command by id
 editor.focus();
@@ -141,6 +148,8 @@ editor.on('change', () => {});
 editor.on('ready', () => {});
 editor.on('selectionchange', ({ rowId, colId }) => {});
 editor.on('converterchange', ({ id }) => {});
+editor.on('colormodechange', ({ mode }) => {});
+editor.on('sitethemechange', ({ available }) => {});
 ```
 
 Global helpers on `BlockFusion` include:
@@ -150,7 +159,7 @@ Global helpers on `BlockFusion` include:
 - `loadHTML(html)`, which parses into the neutral model;
 - `cleanPaste(html)` and `textToHtml(text)`;
 - `createGridConverter` and `spanParser`;
-- `DEFAULT_BLOCKS`, `CSSGRID_STYLESHEET`, `History`;
+- `DEFAULT_BLOCKS`, `CSSGRID_STYLESHEET`, `cssGridStylesheet(columns)`, `History`;
 - `model`, the pure model operations;
 - `plugins`, the built-in plugins.
 
@@ -159,45 +168,63 @@ Global helpers on `BlockFusion` include:
 The editor holds content as a neutral model:
 
 ```ts
-interface Doc  { rows: Row[] }
+interface Doc  { rows: Row[]; columns?: number }   // grid size, default 12
 interface Row  { id; kind: 'grid' | 'raw'; cols: Col[]; raw?: string; attrs? }
 interface Col  { id; kind: 'rich' | 'raw'; span: Span; html: string; attrs? }
-interface Span { base: number; sm?: number; md?: number; lg?: number }   // 1..12
+interface Span { base: number; sm?; md?; lg?; xl?; xxl? }   // 1..columns
 ```
 
 `base` applies at every width. Each breakpoint overrides it from that width up.
 
-A converter turns this model into one framework's markup and back:
+A converter turns this model into one framework's markup and back. Breakpoints map by name; a framework without one leaves that span out and the next smaller one applies:
 
-| Converter | Row | Column classes for base / sm / md / lg |
+| Converter | Row | base / sm / md / lg / xl / xxl |
 | --- | --- | --- |
-| `fusioncss` | `row` | `span-t` / `span-s` / `span-m` / `span-l` + N |
-| `bootstrap3` | `row` | `col-xs-` / `col-sm-` / `col-md-` / `col-lg-` + N |
-| `bootstrap5` | `row` | `col-` / `col-sm-` / `col-md-` / `col-lg-` + N |
-| `foundation5` | `row` | `columns` + `small-` / `medium-` / `large-` / `xlarge-` + N |
-| `foundation6` | `grid-x grid-padding-x` | `cell` + `small-` / `medium-` / `large-` / `xlarge-` + N |
-| `tailwind` | `grid grid-cols-12 gap-6` | `col-span-` / `sm:col-span-` / `md:col-span-` / `lg:col-span-` + N |
-| `cssgrid` | `bf-grid` | `bf-col-` / `bf-sm-` / `bf-md-` / `bf-lg-` + N |
+| `fusioncss` | `row` | `span-t` / `span-s` / `span-m` / `span-l` / `span-x` / none |
+| `bootstrap3` | `row` | `col-xs-` / `col-sm-` / `col-md-` / `col-lg-` / none / none |
+| `bootstrap5` | `row` | `col-` / `col-sm-` / `col-md-` / `col-lg-` / `col-xl-` / `col-xxl-` |
+| `bootstrap6` | `row` | `col-` / `sm:col-` / `md:col-` / `lg:col-` / `xl:col-` / `2xl:col-` |
+| `foundation5` | `row` + `columns` | `small-` / `medium-` / `large-` / `xlarge-` / none / none |
+| `foundation6` | `grid-x grid-padding-x` + `cell` | `small-` / `medium-` / `large-` / `xlarge-` / `xxlarge-` / none |
+| `tailwind` | `grid grid-cols-12 gap-6` | `col-span-` / `sm:` / `md:` / `lg:` / `xl:` / `2xl:` |
+| `cssgrid` | `bf-grid` | `bf-col-` / `bf-sm-` / `bf-md-` / `bf-lg-` / `bf-xl-` / `bf-xxl-` |
+
+Bootstrap 6 is in alpha. Its converter follows the alpha docs (prefix classes, `btn btn-solid theme-*` buttons) and may change when 6.0 ships.
 
 The CSS grid converter needs a stylesheet:
 
 - The editor adds it to the canvas automatically.
-- Sites using it include `dist/blockfusion-grid.css`.
+- Sites using it include `dist/blockfusion-grid.css` (12 columns) or the CSS from `cssGridStylesheet(n)`.
+
+### Grid size
+
+Every converter defaults to 12 columns. A site built with another count sets the `columns` option, and the converter is rebuilt for it (`converter.withColumns(24)`):
+
+```js
+BlockFusion.create(el, { converter: 'fusioncss', columns: 24 });
+```
+
+- Spans, the layout picker, column settings, resizing and announcements all use the grid size. Layout presets appear when they divide it exactly (thirds need a multiple of 3).
+- A document records its grid size. Content meeting a different one is rescaled with rounding: switching framework, undo across a switch, `setDoc`, blocks.
+- Tailwind writes `grid-cols-N`; CSS grid generates its stylesheet for N.
+- A converter without `withColumns` has a fixed grid; the option is ignored with a console warning.
 
 ### Utility classes
 
 Converters also map the utility classes the original contentbuilder converter handled:
 
-- **Visibility.** The neutral form is `hidden-xs`, `hidden-sm`, `hidden-md` and `hidden-lg`; "visible only at X" is stored as hidden everywhere else. Each converter writes its own form:
+- **Visibility.** The neutral form is `hidden-xs` to `hidden-xxl`, one per width range; "visible only at X" is stored as hidden everywhere else. A framework's widest range runs on to the widest screens, so Bootstrap 3's `hidden-lg` is neutral `hidden-lg hidden-xl hidden-xxl`. A state a framework can't express (hidden at xl only, in Bootstrap 3) keeps its neutral classes. Each converter writes its own form:
   - fusionCSS: `hidden-t`, `visible-m`;
   - Bootstrap 3: `hidden-xs`, `visible-md`;
   - Bootstrap 5: `d-none d-md-block`;
+  - Bootstrap 6: `d-none md:d-block`;
   - Foundation: `hide-for-small-only`, `show-for-large-only`;
   - Tailwind: `hidden md:block`;
   - CSS grid: `bf-hidden-xs`.
 - **Buttons.** The neutral form is `button primary` and `button accent`, as in fusionCSS:
   - Bootstrap 3: `btn btn-default` and `btn btn-primary`, as in the original mapping;
   - Bootstrap 5: `btn btn-secondary` and `btn btn-primary`;
+  - Bootstrap 6: `btn btn-solid theme-secondary` and `btn btn-solid theme-primary`;
   - Foundation: `button secondary` and `button primary`;
   - Tailwind: a set of utilities;
   - CSS grid: `bf-btn bf-btn-primary` and `bf-btn bf-btn-accent`.
@@ -277,7 +304,8 @@ A block is one or more rows of columns, described as data rather than markup, so
 }
 ```
 
-- `span`: a number of twelfths from the md breakpoint up, so columns stack on phones. An object such as `{ "base": 12, "sm": 6, "md": 4 }` sets each breakpoint.
+- `span`: a number of columns from the md breakpoint up, so columns stack on phones. An object such as `{ "base": 12, "sm": 6, "md": 4 }` sets each breakpoint (`base`, `sm`, `md`, `lg`, `xl`, `xxl`).
+- Spans count in a 12 column grid unless the block sets `"columns"` (e.g. `"columns": 24`). They are rescaled to the editor's grid on insert.
 - A column with `"kind": "raw"` holds verbatim HTML/JavaScript. A row written as `{ "raw": "…" }` is a raw row.
 - `className`, `id`, `style` and `tag` can go on a row or a column, and any other attributes go in `attrs`.
 - Ids and kinds are optional. `category`, `description` and `thumbnail` are optional too; without a thumbnail, a schematic preview is drawn.
@@ -442,11 +470,30 @@ Invalid fields are marked with `aria-invalid` and `aria-errormessage`.
 - **Forced colours.** Pressed, focus and disabled states use system colours.
 - **Reduced motion.** Transitions are turned off.
 
+### Site colour modes
+
+The editor's own `theme` only styles its chrome. The page being edited always shows the site as it is, and when the editor knows how the site switches light and dark, a **Preview dark mode** toggle appears in the toolbar. It changes the canvas only, never the content.
+
+How the site switches comes from, in order:
+
+1. the `siteTheme` option;
+2. the converter's convention: Bootstrap 5 and 6 use `data-bs-theme` on `<html>`;
+3. `prefers-color-scheme` rules in the canvas stylesheets (readable, same-origin sheets), which are previewed with the canvas's `color-scheme`. This also covers `light-dark()`.
+
+```js
+siteTheme: 'media'                                              // prefers-color-scheme / light-dark()
+siteTheme: { attribute: 'data-bs-theme', light: 'light', dark: 'dark' }
+siteTheme: { attribute: 'data-theme', on: 'body' }               // dark="dark", light removes it
+siteTheme: { className: 'dark' }                                 // Tailwind's class strategy
+siteTheme: (doc, mode) => doc.documentElement.classList.toggle('night', mode === 'dark')
+siteTheme: false                                                 // no preview
+```
+
 ### Contrast checker
 
 The "Contrast checker" toolbar button lists problems, each with a "Go to" button:
 
-- text below WCAG AA contrast (4.5:1, or 3:1 for large text), measured on the rendered canvas so theme CSS and row and column backgrounds count; text over a background image or gradient is flagged to check by eye;
+- text below WCAG AA contrast (4.5:1, or 3:1 for large text), measured on the rendered canvas so theme CSS and row and column backgrounds count; text over a background image or gradient is flagged to check by eye. When the site has a dark mode the editor can preview, contrast is checked in both modes, and "Go to" switches the preview to the mode the problem shows in;
 - images without alt text (or with placeholder alt text);
 - skipped or empty heading levels;
 - links without text.
@@ -518,7 +565,8 @@ src/
 
 - Rich text editing uses the browser's editing commands (`document.execCommand`). They work in every current browser but are formally deprecated, and the markup they produce varies slightly between browsers. The editor tidies the common differences.
 - **Offsets, push and pull.** These classes (e.g. `span-s-push6`, `col-md-offset-2`) are kept as plain classes. They round-trip within one framework but aren't translated between frameworks.
-- **Extra breakpoints.** The model has four breakpoints (base, sm, md, lg). Wider ones, such as fusionCSS `x`, Bootstrap `xl`/`xxl` and Tailwind `xl:`, stay as plain classes.
+- **Missing breakpoints.** A span at a breakpoint the target framework lacks (an `xl` span going to Bootstrap 3) is left out, so the next smaller span applies there.
+- **Grid size changes round.** Converting 24 column content to a 12 column grid halves the spans; odd spans round, so a 5 + 19 split becomes 3 + 10, which adds up to 13 and wraps. Check such rows after converting.
 - **Foundation 5 `lg` spans.** Foundation 5 has no xlarge grid. An `lg` span is written as `xlarge-N`, which round-trips but isn't styled by Foundation 5 itself.
 - **Bootstrap and Foundation breakpoint names.** These map by name, not by pixel width; for example, Bootstrap 5's `md` is 768px while fusionCSS's `m` is 992px.
 - **Tailwind's default gap.** A row whose own class is exactly the default gap (`gap-6`) loses that class on a round trip, since the converter adds it anyway.

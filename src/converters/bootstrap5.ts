@@ -11,6 +11,7 @@ export const bootstrap5 = createGridConverter({
 	name: 'Bootstrap 5',
 	signature: /class="[^"]*\b(col-\d|col-auto|d-(sm-|md-|lg-)?(none|block)|btn-secondary|g[xy]?-\d|offset-\d)/,
 	breakpoints: ['base', 'sm', 'md', 'lg', 'xl', 'xxl'],
+	siteTheme: { attribute: 'data-bs-theme', light: 'light', dark: 'dark' },
 	row: { tokens: ['row'] },
 	col: {
 		spanClass: (bp, n) => (bp === 'base' ? `col-${n}` : `col-${bp}-${n}`),

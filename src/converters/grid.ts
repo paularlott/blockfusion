@@ -17,11 +17,14 @@ import {
 	tokens,
 	wrapRaw,
 } from './html';
+import type { SiteTheme } from '../types';
 import type { Converter, ParseContext, RenderOptions } from './types';
 
 export interface GridConfig {
 	id: string;
 	name: string;
+	/** The framework's light/dark convention, if any. */
+	siteTheme?: SiteTheme;
 	/** Breakpoints with span classes, starting with 'base'. Default base, sm, md, lg. */
 	breakpoints?: readonly Breakpoint[];
 	stylesheet?: string;
@@ -288,6 +291,7 @@ export function createGridConverter(config: GridConfig | ((columns: number) => G
 		breakpoints: bps,
 		withColumns: (n: number) => createGridConverter(config, n),
 		stylesheet: cfg.stylesheet,
+		siteTheme: cfg.siteTheme,
 		detect,
 		parse,
 		render,

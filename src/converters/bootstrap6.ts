@@ -18,6 +18,7 @@ export const bootstrap6 = createGridConverter({
 	// The prefix syntax only Bootstrap 6 (and Tailwind, which has no `row`) uses.
 	signature: /class="[^"]*\b((sm|md|lg|xl|2xl):(col|d|offset|row-cols)-|btn-solid|theme-(primary|secondary))/,
 	breakpoints: ['base', 'sm', 'md', 'lg', 'xl', 'xxl'],
+	siteTheme: { attribute: 'data-bs-theme', light: 'light', dark: 'dark' },
 	row: { tokens: ['row'] },
 	col: {
 		spanClass: (bp, n) => (bp === 'base' ? `col-${n}` : `${PREFIX[bp]}:col-${n}`),

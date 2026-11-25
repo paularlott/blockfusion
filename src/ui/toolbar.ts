@@ -61,7 +61,6 @@ export class Toolbar {
 
 	remove(id: string): void {
 		this.items = this.items.filter((i) => i.id !== id);
-		this.build();
 	}
 
 	/** Build the DOM, optionally in the order of `layout` (ids, '|' separators). */
