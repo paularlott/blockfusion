@@ -103,7 +103,7 @@ export class Canvas {
 			if (!e.relatedTarget) this.hideDropLine();
 		});
 		d.addEventListener('drop', (e) => ed.onCanvasDrop(e));
-		d.addEventListener('pointerdown', () => ed.onCanvasPointerDown());
+		d.addEventListener('pointerdown', (e) => ed.onCanvasPointerDown(e));
 		this.applyTheme();
 		if (typeof ResizeObserver !== 'undefined') {
 			this.resizeObs = new ResizeObserver(() => this.fitHeight());

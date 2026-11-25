@@ -83,6 +83,8 @@ Normal form posts therefore just work. On any other element, its current HTML be
   - Clear formatting, and an HTML source view.
   - Paste cleaning that strips Word and Google Docs markup.
 - **Raw HTML/JavaScript** rows and columns.
+  - **Add HTML** in the toolbar adds a code row. **Add HTML column…** (row menu) and **Add HTML column after…** (column menu) add a code column inside a row, and **Convert to HTML code** turns a text column into one, keeping its place and width.
+  - Saving empty code removes the code row or column.
   - They're written to the output verbatim.
   - In the canvas they show as a labelled placeholder with a sandboxed preview, so scripts never run in the editor.
 - **Undo and redo** for structure and text. Typing in a column merges into one step.

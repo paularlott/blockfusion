@@ -847,8 +847,13 @@ export class Editor {
 		if (t.closest('a') && this.canvas.colOf(t)) e.preventDefault();
 	}
 
-	onCanvasPointerDown(): void {
+	onCanvasPointerDown(e: PointerEvent): void {
 		closeMenus();
+		// Clicking an HTML code row or column selects it, like a text column,
+		// so "after the current row" means the row that was clicked. Text
+		// columns select themselves when they take focus.
+		const t = e.target as HTMLElement;
+		if (t.closest?.('[data-bf-row]') && !t.closest('[data-bf-content]')) this.onCanvasFocus(t);
 	}
 
 	onCanvasPaste(e: ClipboardEvent): void {

@@ -4,6 +4,7 @@
  */
 import {
 	addColCmd,
+	addRawColCmd,
 	convertColToCode,
 	deleteColCmd,
 	deleteRowCmd,
@@ -45,6 +46,18 @@ async function addRawFlow(editor: Editor, where: InsertAt): Promise<void> {
 		submitLabel: 'Add',
 	});
 	if (code !== null) insertRaw(editor, code, where);
+}
+
+/** Ask for code, then add it as an HTML column next to a column (or at the row's end). */
+async function addRawColFlow(editor: Editor, rowId: string, colId?: string): Promise<void> {
+	const code = await codeDialog(editor, {
+		title: 'Add HTML column',
+		label: 'Code',
+		value: '',
+		description: 'The code is written to the page exactly as entered, inside a column of this row. Scripts do not run in the editor; use Preview to try them safely.',
+		submitLabel: 'Add',
+	});
+	if (code !== null && code.trim()) addRawColCmd(editor, rowId, code, colId, 'after');
 }
 
 /** Where new rows go: after the active row, else at the end. */
@@ -145,6 +158,7 @@ export const structurePlugin: Plugin = {
 		rowAct({ id: '---1', label: '', run: () => {} });
 		rowAct({ id: 'row-edit-code', label: 'Edit code…', visible: isRaw, run: (ed, r) => ed.editRaw(r.rowId) });
 		rowAct({ id: 'row-add-col', label: 'Add column', visible: isGrid, disabled: (ed, r) => (findRow(ed.doc, r.rowId)?.cols.length ?? ed.columns) >= ed.columns, run: (ed, r) => addColCmd(ed, r.rowId) });
+		rowAct({ id: 'row-add-raw-col', label: 'Add HTML column…', visible: isGrid, disabled: (ed, r) => (findRow(ed.doc, r.rowId)?.cols.length ?? ed.columns) >= ed.columns, run: (ed, r) => addRawColFlow(ed, r.rowId) });
 		rowAct({ id: 'row-above', label: 'Insert row above…', run: (ed, r) => addRowFlow(ed, { at: 'before', rowId: r.rowId }, 'Insert row above') });
 		rowAct({ id: 'row-below', label: 'Insert row below…', run: (ed, r) => addRowFlow(ed, { at: 'after', rowId: r.rowId }, 'Insert row below') });
 		rowAct({ id: 'row-dup', label: 'Duplicate row', shortcut: 'Mod+D', run: (ed, r) => duplicateRowCmd(ed, r.rowId) });
@@ -190,6 +204,7 @@ export const structurePlugin: Plugin = {
 		const full = (ed: Editor, r: { rowId: string }) => (findRow(ed.doc, r.rowId)?.cols.length ?? ed.columns) >= ed.columns;
 		colAct({ id: 'col-add-before', label: 'Add column before', disabled: full, run: (ed, r) => addColCmd(ed, r.rowId, r.colId, 'before') });
 		colAct({ id: 'col-add', label: 'Add column after', disabled: full, run: (ed, r) => addColCmd(ed, r.rowId, r.colId, 'after') });
+		colAct({ id: 'col-add-raw', label: 'Add HTML column after…', disabled: full, run: (ed, r) => addRawColFlow(ed, r.rowId, r.colId) });
 		colAct({ id: 'col-dup', label: 'Duplicate column', shortcut: 'Mod+D', run: (ed, r) => duplicateColCmd(ed, r.colId!) });
 		colAct({
 			id: 'col-to-raw',
