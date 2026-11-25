@@ -20,6 +20,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the design.
 - [Converters](#converters)
 - [Blocks](#blocks)
 - [Dictation](#dictation)
+- [Read aloud](#read-aloud)
 - [Media provider](#media-provider)
 - [Plugins](#plugins)
 - [Accessibility](#accessibility)
@@ -129,7 +130,7 @@ The default toolbar ids are:
 
 ```
 undo redo | block font size | bold italic underline strike subscript superscript color clear |
-ul ol outdent indent quote | alignLeft alignCenter alignRight alignJustify | link image dictate | blocks addRow addRaw width colorMode |
+ul ol outdent indent quote | alignLeft alignCenter alignRight alignJustify | link image dictate readAloud | blocks addRow addRaw width colorMode |
 source check help
 
 `colorMode` only appears when the editor knows how the site switches light and dark.
@@ -391,6 +392,19 @@ BlockFusion.create(el, {
 ```
 
 `BlockFusion.webSpeechDictation()` returns the built-in provider, or null where the browser has none.
+
+## Read aloud
+
+The **Read aloud** button (speaker, Mod+Alt+R) has the browser speak the selected text, or the whole column the cursor is in, highlighting each word as it's spoken (where the browser supports the CSS Custom Highlight API). Press it again, or Escape, to stop. Headings and paragraphs get a pause between them, and images are read by their alt text.
+
+It's off by default:
+
+```js
+BlockFusion.create(el, { readAloud: true });
+BlockFusion.create(el, { readAloud: { voice: 'Karen', rate: 1.1 } }); // a voice name from speechSynthesis.getVoices()
+```
+
+It uses the browser's own speech (`speechSynthesis`), so nothing is downloaded. The voice follows the content's language; most system voices speak on the device, though some browsers also offer online voices.
 
 ## Media provider
 

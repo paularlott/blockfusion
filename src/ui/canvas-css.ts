@@ -81,6 +81,8 @@ export const CANVAS_CSS = `
 .bf-dictation { color: var(--bf-c-muted); font-style: italic; border-bottom: 2px dotted var(--bf-c-ring); }
 .bf-dictation:empty { display: inline-block; width: 2px; height: 1em; vertical-align: text-bottom; border: 0; background: var(--bf-c-ring); animation: bf-blink 1s steps(1) infinite; }
 @keyframes bf-blink { 50% { opacity: 0; } }
+/* Read aloud: the word being spoken */
+::highlight(bf-reading) { background-color: #fde68a; color: #0f172a; }
 img.bf-selected { outline: 3px solid var(--bf-c-ring); outline-offset: 2px; }
 /* "Go to" from the checker: a ring around the element, dark and light so it shows on any background. */
 .bf-flash { position: absolute !important; z-index: 2147483000; pointer-events: none; box-sizing: border-box; border: 3px solid #b45309; border-radius: 4px; box-shadow: 0 0 0 2px #fff, inset 0 0 0 2px #fff; animation: bf-flash 2.5s ease-out forwards; }
@@ -96,6 +98,7 @@ img.bf-selected { outline: 3px solid var(--bf-c-ring); outline-offset: 2px; }
 	.bf-raw-box { border-color: CanvasText; }
 	.bf-flash { forced-color-adjust: none; border-color: Highlight; box-shadow: none; }
 	.bf-drop-line { forced-color-adjust: none; background: Highlight; box-shadow: none; }
+	::highlight(bf-reading) { background-color: Highlight; color: HighlightText; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } .bf-flash, .bf-dictation { animation: none; } }
 `;

@@ -27,6 +27,13 @@ export interface MediaProvider {
 	upload?(file: File): Promise<{ src: string; alt?: string }>;
 }
 
+export interface ReadAloudOptions {
+	/** A voice name from speechSynthesis.getVoices(); default: one for the content's language. */
+	voice?: string;
+	/** Speaking rate, 0.5 to 2. Default 1. */
+	rate?: number;
+}
+
 /** Callbacks a dictation session reports to. */
 export interface DictationHandlers {
 	/** Words heard so far that may still change; replaces the previous interim text. */
@@ -162,6 +169,11 @@ export interface EditorOptions {
 	 * browser's speech recognition where it exists; a provider uses that.
 	 */
 	dictation?: DictationProvider | boolean;
+	/**
+	 * The Read aloud button: the browser speaks the selection or the column.
+	 * Off by default; true turns it on, or give a voice name and rate.
+	 */
+	readAloud?: boolean | ReadAloudOptions;
 	/**
 	 * Columns in the site's grid when it isn't built with the converter's
 	 * default (12), e.g. 24 for a fusionCSS or Bootstrap build with
