@@ -6,6 +6,8 @@
 import type { Editor } from '../editor';
 import {
 	addCol,
+	clone,
+	columnsOf,
 	createRawRow,
 	createRow,
 	duplicateCol,
@@ -88,14 +90,16 @@ export function deleteRowCmd(editor: Editor, rowId: string): void {
 	if (!next) editor.focusCanvas();
 }
 
-export function addColCmd(editor: Editor, rowId: string, afterColId?: string): void {
+/** Add a column at the end of a row, or after (or before) a given column. */
+export function addColCmd(editor: Editor, rowId: string, nextToColId?: string, side: 'after' | 'before' = 'after'): void {
 	let id = '';
 	editor.apply(
 		'Add column',
 		(d) => {
 			const row = findRow(d, rowId);
 			if (!row || row.kind !== 'grid') return false;
-			const i = afterColId ? row.cols.findIndex((c) => c.id === afterColId) + 1 : row.cols.length;
+			const at = nextToColId ? row.cols.findIndex((c) => c.id === nextToColId) : -1;
+			const i = at < 0 ? row.cols.length : side === 'before' ? at : at + 1;
 			const col = addCol(d, rowId, i, editor.options.breakpoint);
 			if (!col) return false;
 			col.html = '';
@@ -110,6 +114,43 @@ export function addColCmd(editor: Editor, rowId: string, afterColId?: string): v
 		},
 	);
 	if (!id) editor.announce(`A row can have at most ${editor.columns} columns`);
+}
+
+/**
+ * Turn a text column into HTML code. The code is the column's markup as the
+ * site gets it (framework classes, not neutral ones). The only column of a
+ * row becomes a code row, the same as "Add HTML or JavaScript": its row and
+ * column markup only stays, as part of the code, when it carries a class,
+ * id, style or other attribute worth keeping.
+ */
+export function convertColToCode(editor: Editor, colId: string): void {
+	let rowId = '';
+	let wholeRow = false;
+	editor.apply(
+		'Convert to HTML code',
+		(d) => {
+			const ref = findCol(d, colId);
+			if (!ref || ref.col.kind !== 'rich') return false;
+			const { row, col } = ref;
+			rowId = row.id;
+			const conv = editor.converter;
+			if (row.cols.length === 1) {
+				wholeRow = true;
+				const code =
+					row.attrs || col.attrs
+						? conv.render({ rows: [clone(row)], columns: columnsOf(d) }, { rawMarkers: false })
+						: conv.mapHtml(col.html, 'out');
+				d.rows[ref.rowIndex] = { id: row.id, kind: 'raw', cols: [], raw: code };
+			} else {
+				col.kind = 'raw';
+				col.html = conv.mapHtml(col.html, 'out');
+			}
+		},
+		{
+			focus: () => (wholeRow ? { kind: 'row-handle', id: rowId } : { kind: 'col-handle', id: colId }),
+			announce: () => (wholeRow ? 'Row converted to HTML code' : 'Column converted to HTML code'),
+		},
+	);
 }
 
 export function deleteColCmd(editor: Editor, colId: string): void {

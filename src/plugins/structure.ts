@@ -4,6 +4,7 @@
  */
 import {
 	addColCmd,
+	convertColToCode,
 	deleteColCmd,
 	deleteRowCmd,
 	duplicateColCmd,
@@ -81,6 +82,12 @@ export const structurePlugin: Plugin = {
 					description: 'Written to the page exactly as entered. Scripts do not run in the editor.',
 				});
 				if (code === null || code === current) return;
+				// Emptied code leaves nothing to keep: remove the code row or column
+				if (!code.trim()) {
+					if (colId) deleteColCmd(ed, colId);
+					else deleteRowCmd(ed, rowId);
+					return;
+				}
 				ed.apply(
 					'Edit code',
 					(d) => {
@@ -147,11 +154,14 @@ export const structurePlugin: Plugin = {
 
 		const colPos = (ed: Editor, id?: string) => (id ? findCol(ed.doc, id) : undefined);
 		const isRawCol = (ed: Editor, ref: { colId?: string }) => colPos(ed, ref.colId)?.col.kind === 'raw';
-		colAct({ id: 'col-left', label: 'Move column left', shortcut: 'Alt+ArrowLeft', disabled: (ed, r) => (colPos(ed, r.colId)?.colIndex ?? 0) <= 0, run: (ed, r) => moveColBy(ed, r.colId!, -1) });
+		// Moving and resizing mean nothing for the only column in a row
+		const hasSiblings = (ed: Editor, ref: { colId?: string }) => (colPos(ed, ref.colId)?.row.cols.length ?? 0) > 1;
+		colAct({ id: 'col-left', label: 'Move column left', shortcut: 'Alt+ArrowLeft', visible: hasSiblings, disabled: (ed, r) => (colPos(ed, r.colId)?.colIndex ?? 0) <= 0, run: (ed, r) => moveColBy(ed, r.colId!, -1) });
 		colAct({
 			id: 'col-right',
 			label: 'Move column right',
 			shortcut: 'Alt+ArrowRight',
+			visible: hasSiblings,
 			disabled: (ed, r) => {
 				const ref = colPos(ed, r.colId);
 				return !ref || ref.colIndex >= ref.row.cols.length - 1;
@@ -162,6 +172,7 @@ export const structurePlugin: Plugin = {
 			id: 'col-wider',
 			label: 'Make wider',
 			shortcut: 'Alt+Shift+ArrowRight',
+			visible: hasSiblings,
 			disabled: (ed, r) => spanAt(colPos(ed, r.colId)?.col.span ?? { base: ed.columns }, ed.options.breakpoint, ed.columns) >= ed.columns,
 			run: (ed, r) => resizeColBy(ed, r.colId!, 1),
 		});
@@ -169,24 +180,22 @@ export const structurePlugin: Plugin = {
 			id: 'col-narrower',
 			label: 'Make narrower',
 			shortcut: 'Alt+Shift+ArrowLeft',
+			visible: hasSiblings,
 			disabled: (ed, r) => spanAt(colPos(ed, r.colId)?.col.span ?? { base: 1 }, ed.options.breakpoint, ed.columns) <= 1,
 			run: (ed, r) => resizeColBy(ed, r.colId!, -1),
 		});
 		colAct({ id: '---3', label: '', run: () => {} });
 		colAct({ id: 'col-edit-text', label: 'Edit text', visible: (ed, r) => !isRawCol(ed, r), run: (ed, r) => ed.canvas.focusCol(r.colId!) });
 		colAct({ id: 'col-edit-code', label: 'Edit code…', visible: isRawCol, run: (ed, r) => ed.editRaw(r.rowId, r.colId) });
-		colAct({ id: 'col-add', label: 'Add column after', run: (ed, r) => addColCmd(ed, r.rowId, r.colId) });
+		const full = (ed: Editor, r: { rowId: string }) => (findRow(ed.doc, r.rowId)?.cols.length ?? ed.columns) >= ed.columns;
+		colAct({ id: 'col-add-before', label: 'Add column before', disabled: full, run: (ed, r) => addColCmd(ed, r.rowId, r.colId, 'before') });
+		colAct({ id: 'col-add', label: 'Add column after', disabled: full, run: (ed, r) => addColCmd(ed, r.rowId, r.colId, 'after') });
 		colAct({ id: 'col-dup', label: 'Duplicate column', shortcut: 'Mod+D', run: (ed, r) => duplicateColCmd(ed, r.colId!) });
 		colAct({
 			id: 'col-to-raw',
 			label: 'Convert to HTML code',
 			visible: (ed, r) => !isRawCol(ed, r),
-			run: (ed, r) =>
-				ed.apply('Convert to HTML', (d) => {
-					const ref = findCol(d, r.colId!);
-					if (!ref) return false;
-					ref.col.kind = 'raw';
-				}, { focus: { kind: 'col-handle', id: r.colId! } }),
+			run: (ed, r) => convertColToCode(ed, r.colId!),
 		});
 		colAct({ id: 'col-settings', label: 'Column settings…', run: (ed, r) => settingsDialog(ed, 'col', r.colId!) });
 		colAct({ id: '---4', label: '', run: () => {} });

@@ -896,8 +896,12 @@ export class Editor {
 
 	openHandleMenu(kind: 'row' | 'col', rowId: string, colId: string | undefined, btn: HTMLElement): void {
 		const ref = { rowId, colId };
-		const items = this.handleActions
-			.filter((a) => a.kind === kind && (a.visible ? a.visible(this, ref) : true))
+		const shown = this.handleActions.filter((a) => a.kind === kind && (a.visible ? a.visible(this, ref) : true));
+		// No separator at either end or next to another, once hidden items are gone
+		const tidy = shown.filter(
+			(a, i, arr) => !a.id.startsWith('---') || (i > 0 && i < arr.length - 1 && !arr[i - 1].id.startsWith('---')),
+		);
+		const items = tidy
 			.map((a) =>
 				a.id.startsWith('---')
 					? { label: '', separator: true }
