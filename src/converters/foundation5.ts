@@ -7,7 +7,7 @@
  */
 import { createGridConverter, spanParser } from './grid';
 
-const BP = { base: 'small', sm: 'medium', md: 'large', lg: 'xlarge' } as const;
+const BP: Record<string, string> = { base: 'small', sm: 'medium', md: 'large', lg: 'xlarge' };
 
 export const foundationButtons: Array<[string[], string[]]> = [
 	[['button', 'primary'], ['button', 'secondary']],

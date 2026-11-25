@@ -21,7 +21,7 @@ function blockPreview(editor: Editor, block: Block): HTMLElement {
 	}
 	const box = h('span', { className: 'bf-block-thumb bf-block-schema', 'aria-hidden': 'true' });
 	for (const r of rows.slice(0, 3)) {
-		box.append(r.kind === 'raw' ? layoutPreview([12]) : layoutPreview(r.cols.map((c) => c.span.md ?? c.span.sm ?? c.span.base)));
+		box.append(r.kind === 'raw' ? layoutPreview([1]) : layoutPreview(r.cols.map((c) => c.span.md ?? c.span.sm ?? c.span.base)));
 	}
 	return box;
 }

@@ -101,6 +101,12 @@ export interface NamedValue {
 export interface EditorOptions {
 	/** Converter id for output and editing. Default 'fusioncss'. */
 	converter?: string;
+	/**
+	 * Columns in the site's grid when it isn't built with the converter's
+	 * default (12), e.g. 24 for a fusionCSS or Bootstrap build with
+	 * `@numColumns` / `$grid-columns` set to 24.
+	 */
+	columns?: number;
 	/** Stylesheet URLs loaded into the canvas (theme CSS, framework CSS). */
 	stylesheets?: string[];
 	/** Class for the canvas <body>, e.g. "container" or "page-content". */

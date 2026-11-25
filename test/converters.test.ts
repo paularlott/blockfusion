@@ -31,7 +31,7 @@ function sample(): Doc {
 						attrs: { className: 'lead', id: 'first' },
 					},
 					{ id: 'c3', kind: 'rich', span: { base: 6, md: 8 }, html: '<p class="hidden-xs hidden-sm">Wide only</p>' },
-					{ id: 'c4', kind: 'rich', span: { base: 12, md: 12, lg: 9 }, html: '<p class="hidden-xs hidden-sm hidden-lg">Middle only</p>' },
+					{ id: 'c4', kind: 'rich', span: { base: 12, md: 12, lg: 9 }, html: '<p class="hidden-xs hidden-sm hidden-lg hidden-xl hidden-xxl">Middle only</p>' },
 				],
 			},
 			{ id: 'r3', kind: 'raw', cols: [], raw: '<script>window.x = 1 < 2 && "a";</script>\n<div id=embed></div>' },
@@ -57,7 +57,7 @@ const ids = builtinConverters.map((c) => c.id);
 
 describe('built-in converters', () => {
 	it('are all registered', () => {
-		expect(ids).toEqual(['fusioncss', 'bootstrap5', 'bootstrap3', 'foundation6', 'foundation5', 'tailwind', 'cssgrid']);
+		expect(ids).toEqual(['fusioncss', 'bootstrap5', 'bootstrap6', 'bootstrap3', 'foundation6', 'foundation5', 'tailwind', 'cssgrid']);
 		for (const id of ids) expect(getConverter(id)).toBeTruthy();
 	});
 
@@ -217,7 +217,7 @@ describe('loading foreign and unknown markup', () => {
 
 	it('maps Foundation show-for classes to hidden sets', () => {
 		const f6 = getConverter('foundation6')!;
-		expect(f6.toNeutral(['show-for-medium-only', 'x'])).toEqual(['hidden-xs', 'hidden-md', 'hidden-lg', 'x']);
+		expect(f6.toNeutral(['show-for-medium-only', 'x'])).toEqual(['hidden-xs', 'hidden-md', 'hidden-lg', 'hidden-xl', 'hidden-xxl', 'x']);
 	});
 });
 

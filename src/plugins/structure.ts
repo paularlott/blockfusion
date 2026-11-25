@@ -137,7 +137,7 @@ export const structurePlugin: Plugin = {
 		});
 		rowAct({ id: '---1', label: '', run: () => {} });
 		rowAct({ id: 'row-edit-code', label: 'Edit code…', visible: isRaw, run: (ed, r) => ed.editRaw(r.rowId) });
-		rowAct({ id: 'row-add-col', label: 'Add column', visible: isGrid, disabled: (ed, r) => (findRow(ed.doc, r.rowId)?.cols.length ?? 12) >= 12, run: (ed, r) => addColCmd(ed, r.rowId) });
+		rowAct({ id: 'row-add-col', label: 'Add column', visible: isGrid, disabled: (ed, r) => (findRow(ed.doc, r.rowId)?.cols.length ?? ed.columns) >= ed.columns, run: (ed, r) => addColCmd(ed, r.rowId) });
 		rowAct({ id: 'row-above', label: 'Insert row above…', run: (ed, r) => addRowFlow(ed, { at: 'before', rowId: r.rowId }, 'Insert row above') });
 		rowAct({ id: 'row-below', label: 'Insert row below…', run: (ed, r) => addRowFlow(ed, { at: 'after', rowId: r.rowId }, 'Insert row below') });
 		rowAct({ id: 'row-dup', label: 'Duplicate row', shortcut: 'Mod+D', run: (ed, r) => duplicateRowCmd(ed, r.rowId) });
@@ -162,14 +162,14 @@ export const structurePlugin: Plugin = {
 			id: 'col-wider',
 			label: 'Make wider',
 			shortcut: 'Alt+Shift+ArrowRight',
-			disabled: (ed, r) => spanAt(colPos(ed, r.colId)?.col.span ?? { base: 12 }, ed.options.breakpoint) >= 12,
+			disabled: (ed, r) => spanAt(colPos(ed, r.colId)?.col.span ?? { base: ed.columns }, ed.options.breakpoint, ed.columns) >= ed.columns,
 			run: (ed, r) => resizeColBy(ed, r.colId!, 1),
 		});
 		colAct({
 			id: 'col-narrower',
 			label: 'Make narrower',
 			shortcut: 'Alt+Shift+ArrowLeft',
-			disabled: (ed, r) => spanAt(colPos(ed, r.colId)?.col.span ?? { base: 1 }, ed.options.breakpoint) <= 1,
+			disabled: (ed, r) => spanAt(colPos(ed, r.colId)?.col.span ?? { base: 1 }, ed.options.breakpoint, ed.columns) <= 1,
 			run: (ed, r) => resizeColBy(ed, r.colId!, -1),
 		});
 		colAct({ id: '---3', label: '', run: () => {} });

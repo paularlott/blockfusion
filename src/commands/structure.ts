@@ -35,7 +35,7 @@ function insertIndex(doc: Doc, where: InsertAt): number {
 const position = (doc: Doc, rowId: string) => `row ${rowIndex(doc, rowId) + 1} of ${doc.rows.length}`;
 
 export function insertRow(editor: Editor, spans: number[], where: InsertAt): void {
-	const row = createRow(spans, editor.options.breakpoint, '');
+	const row = createRow(spans, editor.options.breakpoint, '', editor.columns);
 	editor.apply('Insert row', (d) => insertRows(d, [row], insertIndex(d, where)), {
 		focus: { kind: 'col', id: row.cols[0].id, atStart: true },
 		announce: (d) => `Row inserted with ${spans.length} column${spans.length > 1 ? 's' : ''}, ${position(d, row.id)}`,
@@ -109,7 +109,7 @@ export function addColCmd(editor: Editor, rowId: string, afterColId?: string): v
 			},
 		},
 	);
-	if (!id) editor.announce('A row can have at most 12 columns');
+	if (!id) editor.announce(`A row can have at most ${editor.columns} columns`);
 }
 
 export function deleteColCmd(editor: Editor, colId: string): void {
@@ -152,12 +152,12 @@ export function resizeColBy(editor: Editor, colId: string, delta: number): void 
 		},
 		{
 			focus: { kind: 'col-handle', id: colId },
-			announce: () => `Column is ${now} of 12 wide`,
+			announce: () => `Column is ${now} of ${editor.columns} wide`,
 		},
 	);
 	if (!ok) {
 		const ref = findCol(editor.doc, colId);
-		editor.announce(ref ? `Column is ${spanAt(ref.col.span, bp)} of 12 wide and cannot change further` : 'Column not found');
+		editor.announce(ref ? `Column is ${spanAt(ref.col.span, bp, editor.columns)} of ${editor.columns} wide and cannot change further` : 'Column not found');
 	}
 }
 
@@ -172,5 +172,5 @@ export function duplicateColCmd(editor: Editor, colId: string): void {
 		},
 		{ focus: () => ({ kind: 'col-handle', id }), announce: 'Column duplicated' },
 	);
-	if (!id) editor.announce('A row can have at most 12 columns');
+	if (!id) editor.announce(`A row can have at most ${editor.columns} columns`);
 }

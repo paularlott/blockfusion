@@ -4,20 +4,40 @@
  * it into framework markup and back.
  */
 
-/** Responsive breakpoints the model knows about, smallest first. */
-export type Breakpoint = 'base' | 'sm' | 'md' | 'lg';
-export const BREAKPOINTS: readonly Breakpoint[] = ['base', 'sm', 'md', 'lg'];
+/**
+ * Responsive breakpoints the model knows about, smallest first. They map to
+ * a framework's breakpoints by name (Bootstrap 5's xxl, Tailwind's 2xl,
+ * fusionCSS's x, ...); a converter declares which ones it supports.
+ */
+export type Breakpoint = 'base' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
+export const BREAKPOINTS: readonly Breakpoint[] = ['base', 'sm', 'md', 'lg', 'xl', 'xxl'];
+
+/** Names for the breakpoints in the interface. */
+export const BREAKPOINT_LABELS: Record<Breakpoint, string> = {
+	base: 'All widths',
+	sm: 'Small and up',
+	md: 'Medium and up',
+	lg: 'Large and up',
+	xl: 'Extra large and up',
+	xxl: 'Extra extra large and up',
+};
+
+/** The usual grid size; a document or converter may use another. */
+export const DEFAULT_COLUMNS = 12;
 
 /**
- * Column span on a 12 column grid. `base` applies at every width, and each
- * breakpoint overrides it from that width up. A missing breakpoint inherits
- * the next smaller one.
+ * Column span, in columns of the document's grid (12 unless `Doc.columns`
+ * says otherwise). `base` applies at every width, and each breakpoint
+ * overrides it from that width up. A missing breakpoint inherits the next
+ * smaller one.
  */
 export interface Span {
 	base: number;
 	sm?: number;
 	md?: number;
 	lg?: number;
+	xl?: number;
+	xxl?: number;
 }
 
 /**
@@ -55,6 +75,8 @@ export interface Row {
 
 export interface Doc {
 	rows: Row[];
+	/** Columns in the grid the spans are counted in. Default 12. */
+	columns?: number;
 }
 
 export interface Block {
@@ -65,4 +87,6 @@ export interface Block {
 	description?: string;
 	/** Neutral rows, or HTML in any framework a registered converter knows. */
 	rows: Row[] | string;
+	/** Grid size the rows' spans are written for. Default 12; scaled on insert. */
+	columns?: number;
 }

@@ -3,8 +3,8 @@
  * configuration of this: which classes mark a row, how a span becomes a class
  * and back, and how utility classes map.
  */
-import { cleanAttrs, uid } from '../model/doc';
-import type { Breakpoint, Col, Doc, Row, Span } from '../model/types';
+import { cleanAttrs, columnsOf, scaleSpan, uid } from '../model/doc';
+import { BREAKPOINTS, DEFAULT_COLUMNS, type Breakpoint, type Col, type Doc, type Row, type Span } from '../model/types';
 import { makeClassMapper, type UtilityConfig } from './classmap';
 import {
 	attrString,
@@ -22,6 +22,8 @@ import type { Converter, ParseContext, RenderOptions } from './types';
 export interface GridConfig {
 	id: string;
 	name: string;
+	/** Breakpoints with span classes, starting with 'base'. Default base, sm, md, lg. */
+	breakpoints?: readonly Breakpoint[];
 	stylesheet?: string;
 	/**
 	 * Classes only this framework uses (e.g. Bootstrap 3's col-xs-). A match
@@ -94,7 +96,14 @@ function rawCode(nodes: Node[], ctx?: ParseContext): string | null {
 	return null;
 }
 
-export function createGridConverter(cfg: GridConfig): Converter {
+/**
+ * Build a converter from a grid description. Pass a function of the column
+ * count when classes or CSS depend on it (Tailwind's grid-cols-12); the
+ * converter's `withColumns(n)` then builds the same grid with n columns.
+ */
+export function createGridConverter(config: GridConfig | ((columns: number) => GridConfig), columns = DEFAULT_COLUMNS): Converter {
+	const cfg = typeof config === 'function' ? config(columns) : config;
+	const bps = BREAKPOINTS.filter((bp) => (cfg.breakpoints ?? ['base', 'sm', 'md', 'lg']).includes(bp));
 	const mapper = makeClassMapper(cfg.utilities ?? {});
 	const colTokens = cfg.col.tokens ?? [];
 	const colAccept = [...colTokens, ...(cfg.col.altTokens ?? [])];
@@ -105,8 +114,8 @@ export function createGridConverter(cfg: GridConfig): Converter {
 
 	function spanClasses(span: Span): string[] {
 		const out: string[] = [];
-		const others = (['sm', 'md', 'lg'] as const).filter((bp) => span[bp] !== undefined);
-		const skipBase = cfg.col.base12Implicit && span.base === 12 && (others.length > 0 || colTokens.length > 0);
+		const others = bps.filter((bp) => bp !== 'base' && span[bp] !== undefined);
+		const skipBase = cfg.col.base12Implicit && span.base === columns && (others.length > 0 || colTokens.length > 0);
 		if (!skipBase) out.push(cfg.col.spanClass('base', span.base));
 		for (const bp of others) out.push(cfg.col.spanClass(bp, span[bp]!));
 		return out;
@@ -130,13 +139,13 @@ export function createGridConverter(cfg: GridConfig): Converter {
 
 	function parseCol(el: Element, ctx?: ParseContext): Col | null {
 		const cls = tokens(el.getAttribute('class'));
-		const span: Span = { base: 12 };
+		const span: Span = { base: columns };
 		let hasSpan = false;
 		let hasBase = false;
 		const rest: string[] = [];
 		for (const t of cls) {
 			const s = cfg.col.parseSpan(t);
-			if (s) {
+			if (s && bps.includes(s.bp) && s.n <= columns) {
 				span[s.bp] = s.n;
 				hasSpan = true;
 				if (s.bp === 'base') hasBase = true;
@@ -200,7 +209,7 @@ export function createGridConverter(cfg: GridConfig): Converter {
 				rows.push({
 					id: uid('r'),
 					kind: 'grid',
-					cols: [{ id: uid('c'), kind: 'rich', span: { base: 12 }, html: mapHtml(html, 'in') }],
+					cols: [{ id: uid('c'), kind: 'rich', span: { base: columns }, html: mapHtml(html, 'in') }],
 				});
 		};
 
@@ -238,7 +247,7 @@ export function createGridConverter(cfg: GridConfig): Converter {
 			if (buffer.length || !isBlank(node)) buffer.push(node);
 		}
 		flush();
-		return { rows };
+		return columns === DEFAULT_COLUMNS ? { rows } : { rows, columns };
 	}
 
 	function detect(root: Element): number {
@@ -259,11 +268,14 @@ export function createGridConverter(cfg: GridConfig): Converter {
 
 	function render(doc: Doc, opts: RenderOptions = {}): string {
 		const markers = opts.rawMarkers !== false;
+		const from = columnsOf(doc);
 		return doc.rows
 			.map((row) => {
 				if (row.kind === 'raw') return wrapRaw(row.raw ?? '', markers);
 				const tag = row.attrs?.tag || 'div';
-				const cols = row.cols.map((c) => renderCol(c, markers)).join('\n');
+				const cols = row.cols
+					.map((c) => renderCol(from === columns ? c : { ...c, span: scaleSpan(c.span, from, columns) }, markers))
+					.join('\n');
 				return `<${tag}${attrString(rowClass(row), row.attrs)}>\n${cols}\n</${tag}>`;
 			})
 			.join('\n');
@@ -272,6 +284,9 @@ export function createGridConverter(cfg: GridConfig): Converter {
 	return {
 		id: cfg.id,
 		name: cfg.name,
+		columns,
+		breakpoints: bps,
+		withColumns: (n: number) => createGridConverter(config, n),
 		stylesheet: cfg.stylesheet,
 		detect,
 		parse,
@@ -291,7 +306,8 @@ export function spanParser(re: RegExp, map: Record<string, Breakpoint>) {
 		if (!m) return null;
 		const bp = map[m[1] ?? ''];
 		const n = Number(m[2]);
-		if (!bp || !Number.isInteger(n) || n < 1 || n > 12) return null;
+		// The upper limit is the grid's column count, checked by the converter.
+		if (!bp || !Number.isInteger(n) || n < 1) return null;
 		return { bp, n };
 	};
 }

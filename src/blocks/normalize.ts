@@ -9,8 +9,10 @@
  *                 "cols": [ { "span": 6, "html": "<h2>Title</h2><p>Text</p>" },
  *                           { "span": 6, "html": "<img src=\"…\" alt=\"…\">" } ] } ] }
  *
- * - `span` is a number of 12ths from the md breakpoint up (columns stack on
- *   phones), or an object { base, sm, md, lg } for full control.
+ * - `span` is a number of columns from the md breakpoint up (columns stack
+ *   on phones), or an object { base, sm, md, lg, xl, xxl } for full control.
+ * - Spans count in a 12 column grid unless the block sets "columns"; they
+ *   are rescaled to the editor's grid on insert.
  * - A column with "kind": "raw" (or a "raw" key) holds verbatim HTML/JS.
  * - A row { "raw": "…" } is a raw HTML/JavaScript row.
  * - className, id, style and other attributes go on the row or column
@@ -19,31 +21,32 @@
  *
  * HTML in any known framework is still accepted for `rows` and converted.
  */
-import type { Attrs, Block, Col, Row, Span } from '../model/types';
+import { BREAKPOINTS, DEFAULT_COLUMNS, type Attrs, type Block, type Col, type Row, type Span } from '../model/types';
 
 type Loose = Record<string, any>;
 
-const clampSpan = (n: unknown): number | undefined => {
+const clampSpan = (n: unknown, columns: number): number | undefined => {
 	const v = Math.round(Number(n));
-	return Number.isFinite(v) && v >= 1 && v <= 12 ? v : undefined;
+	return Number.isFinite(v) && v >= 1 && v <= columns ? v : undefined;
 };
 
-/** A span from a number (md and up) or a { base, sm, md, lg } object. */
-export function normalizeSpan(s: unknown): Span {
+/** A span from a number (md and up) or a { base, sm, md, lg, xl, xxl } object. */
+export function normalizeSpan(s: unknown, columns = DEFAULT_COLUMNS): Span {
 	if (typeof s === 'number' || typeof s === 'string') {
-		const n = clampSpan(s) ?? 12;
-		return n === 12 ? { base: 12 } : { base: 12, md: n };
+		const n = clampSpan(s, columns) ?? columns;
+		return n === columns ? { base: columns } : { base: columns, md: n };
 	}
 	if (s && typeof s === 'object') {
 		const o = s as Loose;
-		const span: Span = { base: clampSpan(o.base) ?? 12 };
-		for (const bp of ['sm', 'md', 'lg'] as const) {
-			const v = clampSpan(o[bp]);
+		const span: Span = { base: clampSpan(o.base, columns) ?? columns };
+		for (const bp of BREAKPOINTS) {
+			if (bp === 'base') continue;
+			const v = clampSpan(o[bp], columns);
 			if (v !== undefined) span[bp] = v;
 		}
 		return span;
 	}
-	return { base: 12 };
+	return { base: columns };
 }
 
 function attrsOf(o: Loose): Attrs | undefined {
@@ -53,14 +56,14 @@ function attrsOf(o: Loose): Attrs | undefined {
 	return Object.keys(a).length ? a : undefined;
 }
 
-function normalizeCol(c: unknown): Col {
-	if (typeof c === 'string') return { id: '', kind: 'rich', span: { base: 12 }, html: c };
+function normalizeCol(c: unknown, columns: number): Col {
+	if (typeof c === 'string') return { id: '', kind: 'rich', span: { base: columns }, html: c };
 	const o = (c ?? {}) as Loose;
 	const raw = o.kind === 'raw' || typeof o.raw === 'string';
 	const col: Col = {
 		id: typeof o.id === 'string' ? o.id : '',
 		kind: raw ? 'raw' : 'rich',
-		span: normalizeSpan(o.span),
+		span: normalizeSpan(o.span, columns),
 		html: String((raw ? o.raw ?? o.html : o.html) ?? ''),
 	};
 	const attrs = attrsOf(o);
@@ -68,11 +71,11 @@ function normalizeCol(c: unknown): Col {
 	return col;
 }
 
-function normalizeRow(r: unknown): Row {
+function normalizeRow(r: unknown, columns: number): Row {
 	const o = (r ?? {}) as Loose;
 	if (o.kind === 'raw' || (typeof o.raw === 'string' && !Array.isArray(o.cols)))
 		return { id: typeof o.id === 'string' ? o.id : '', kind: 'raw', cols: [], raw: String(o.raw ?? '') };
-	const cols = Array.isArray(o.cols) && o.cols.length ? o.cols.map(normalizeCol) : [normalizeCol('')];
+	const cols = Array.isArray(o.cols) && o.cols.length ? o.cols.map((c: unknown) => normalizeCol(c, columns)) : [normalizeCol('', columns)];
 	const row: Row = { id: typeof o.id === 'string' ? o.id : '', kind: 'grid', cols };
 	const attrs = attrsOf(o);
 	if (attrs) row.attrs = attrs;
@@ -83,11 +86,13 @@ function normalizeRow(r: unknown): Row {
 export function normalizeBlock(b: unknown): Block | null {
 	const o = (b ?? {}) as Loose;
 	if (typeof o.id !== 'string' || o.id === '' || typeof o.name !== 'string') return null;
+	const columns = Number.isInteger(o.columns) && o.columns > 0 ? (o.columns as number) : DEFAULT_COLUMNS;
 	const block: Block = {
 		id: o.id,
 		name: o.name,
-		rows: typeof o.rows === 'string' ? o.rows : (Array.isArray(o.rows) ? o.rows : [o.rows ?? {}]).map(normalizeRow),
+		rows: typeof o.rows === 'string' ? o.rows : (Array.isArray(o.rows) ? o.rows : [o.rows ?? {}]).map((r: unknown) => normalizeRow(r, columns)),
 	};
+	if (columns !== DEFAULT_COLUMNS) block.columns = columns;
 	for (const k of ['category', 'thumbnail', 'description'] as const)
 		if (typeof o[k] === 'string') block[k] = o[k];
 	return block;

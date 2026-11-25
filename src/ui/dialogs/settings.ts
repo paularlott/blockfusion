@@ -4,6 +4,7 @@
  */
 import type { Editor } from '../../editor';
 import { cleanAttrs, findCol, findRow, normaliseSpan } from '../../model/doc';
+import { BREAKPOINT_LABELS } from '../../model/types';
 import type { Attrs, Span } from '../../model/types';
 import { field, input, openDialog } from '../dialog';
 import { h } from '../dom';
@@ -87,18 +88,13 @@ export async function settingsDialog(editor: Editor, kind: 'row' | 'col', id: st
 		const inputs = {} as Record<keyof Span, HTMLInputElement>;
 		spanInputs = inputs;
 		const grid = h('div', { className: 'bf-span-grid' });
-		const names: Array<[keyof Span, string]> = [
-			['base', 'All widths'],
-			['sm', 'Small and up'],
-			['md', 'Medium and up'],
-			['lg', 'Large and up'],
-		];
-		for (const [bp, label] of names) {
-			const inp = input({ type: 'number', min: '1', max: '12', inputmode: 'numeric', value: col.span[bp] !== undefined ? String(col.span[bp]) : '', placeholder: bp === 'base' ? '12' : 'inherit' });
+		const cols = String(editor.columns);
+		for (const bp of editor.converter.breakpoints ?? (['base', 'sm', 'md', 'lg'] as const)) {
+			const inp = input({ type: 'number', min: '1', max: cols, inputmode: 'numeric', value: col.span[bp] !== undefined ? String(col.span[bp]) : '', placeholder: bp === 'base' ? cols : 'inherit' });
 			inputs[bp] = inp;
-			grid.append(field(label, inp));
+			grid.append(field(BREAKPOINT_LABELS[bp], inp));
 		}
-		body.push(h('fieldset', { className: 'bf-fieldset' }, h('legend', { className: 'bf-label' }, 'Width in twelfths (blank inherits the smaller size)'), grid));
+		body.push(h('fieldset', { className: 'bf-fieldset' }, h('legend', { className: 'bf-label' }, `Width in columns, out of ${cols} (blank inherits the smaller size)`), grid));
 	}
 	body.push(
 		field('CSS classes', cls, 'Separate classes with spaces. Grid classes are managed for you.'),
@@ -136,11 +132,13 @@ export async function settingsDialog(editor: Editor, kind: 'row' | 'col', id: st
 			let span: Span | null = null;
 			const inputs = spanInputs;
 			if (inputs) {
+				const max = editor.columns;
 				const read = (bp: keyof Span) => {
-					const n = Number(inputs[bp].value);
-					return inputs[bp].value.trim() && n >= 1 && n <= 12 ? Math.round(n) : undefined;
+					const el = inputs[bp];
+					const n = Number(el?.value);
+					return el && el.value.trim() && n >= 1 && n <= max ? Math.round(n) : undefined;
 				};
-				span = normaliseSpan({ base: read('base') ?? 12, sm: read('sm'), md: read('md'), lg: read('lg') });
+				span = normaliseSpan({ base: read('base') ?? max, sm: read('sm'), md: read('md'), lg: read('lg'), xl: read('xl'), xxl: read('xxl') }, max);
 			}
 			editor.apply(
 				kind === 'row' ? 'Row settings' : 'Column settings',

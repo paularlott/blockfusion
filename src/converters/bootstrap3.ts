@@ -5,7 +5,7 @@
  */
 import { createGridConverter, spanParser } from './grid';
 
-const BP = { base: 'xs', sm: 'sm', md: 'md', lg: 'lg' } as const;
+const BP: Record<string, string> = { base: 'xs', sm: 'sm', md: 'md', lg: 'lg' };
 
 export const bootstrap3 = createGridConverter({
 	id: 'bootstrap3',

@@ -4,6 +4,7 @@ import { parseLayout } from '../../model/doc';
 import { h, nextId } from '../dom';
 import { field, input, openDialog } from '../dialog';
 
+/** Preset layouts, in twelfths; scaled to the grid and offered when they divide exactly. */
 export const LAYOUTS: Array<{ name: string; spans: number[] }> = [
 	{ name: 'One column', spans: [12] },
 	{ name: 'Two halves', spans: [6, 6] },
@@ -20,12 +21,22 @@ export function layoutPreview(spans: number[]): HTMLElement {
 	return box;
 }
 
+/** The presets that fit a grid of `columns`, with spans in that grid. */
+export function layoutsFor(columns: number): Array<{ name: string; spans: number[] }> {
+	return LAYOUTS.filter((l) => l.spans.every((s) => (s * columns) % 12 === 0)).map((l) => ({
+		name: l.name,
+		spans: l.spans.map((s) => (s * columns) / 12),
+	}));
+}
+
 export function layoutDialog(editor: Editor, title = 'Add row'): Promise<number[] | null> {
 	const name = nextId('bf-layout');
+	const columns = editor.columns;
+	const layouts = layoutsFor(columns);
 	let result: number[] | null = null;
 	const radios: HTMLInputElement[] = [];
 	const list = h('div', { className: 'bf-layouts' });
-	LAYOUTS.forEach((l, i) => {
+	layouts.forEach((l, i) => {
 		const id = `${name}-${i}`;
 		const r = h('input', { type: 'radio', name, id, value: String(i), className: 'bf-radio', checked: i === 0 });
 		radios.push(r);
@@ -44,7 +55,7 @@ export function layoutDialog(editor: Editor, title = 'Add row'): Promise<number[
 		custom.removeAttribute('aria-invalid');
 	});
 	const fieldset = h('fieldset', { className: 'bf-fieldset' }, h('legend', { className: 'bf-label' }, 'Columns'), list);
-	const customField = field('Custom spans (twelfths)', custom, 'Numbers from 1 to 12 separated by spaces or +, or fractions like 1/3.');
+	const customField = field(`Custom spans (out of ${columns})`, custom, `Numbers from 1 to ${columns} separated by spaces or +, or fractions like 1/2.`);
 	customField.append(error);
 
 	return openDialog(editor.root, {
@@ -55,9 +66,9 @@ export function layoutDialog(editor: Editor, title = 'Add row'): Promise<number[
 		onSubmit: () => {
 			const chosen = radios.find((r) => r.checked);
 			if (!chosen || chosen.value === 'custom') {
-				const spans = parseLayout(custom.value);
+				const spans = parseLayout(custom.value, columns);
 				if (!spans) {
-					error.textContent = 'Enter spans from 1 to 12, for example "3 6 3".';
+					error.textContent = `Enter spans from 1 to ${columns}, for example "${columns / 4 === Math.floor(columns / 4) ? `${columns / 4} ${columns / 2} ${columns / 4}` : `${Math.ceil(columns / 2)} ${Math.floor(columns / 2)}`}".`;
 					error.hidden = false;
 					custom.setAttribute('aria-invalid', 'true');
 					custom.setAttribute('aria-errormessage', error.id);
@@ -65,7 +76,7 @@ export function layoutDialog(editor: Editor, title = 'Add row'): Promise<number[
 					return false;
 				}
 				result = spans;
-			} else result = LAYOUTS[Number(chosen.value)].spans;
+			} else result = layouts[Number(chosen.value)].spans;
 		},
 	}).then((ok) => (ok ? result : null));
 }

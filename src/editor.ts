@@ -8,8 +8,8 @@ import { loadHTML } from './converters/convert';
 import { getConverter } from './converters/registry';
 import type { Converter } from './converters/types';
 import { History } from './history/history';
-import { clone, emptyDoc, findCol, findRow, insertRows, reId } from './model/doc';
-import type { Block, Doc, Row } from './model/types';
+import { clone, columnsOf, emptyDoc, findCol, findRow, insertRows, reId, scaleDoc, scaleRows } from './model/doc';
+import { DEFAULT_COLUMNS, type Block, type Breakpoint, type Doc, type Row } from './model/types';
 import { cleanPaste, textToHtml, type PasteFilter } from './paste/clean';
 import type {
 	CodeEditorFactory,
@@ -79,7 +79,7 @@ interface ResolvedOptions extends EditorOptions {
 	fontSizes: NamedValue[];
 	colors: NamedValue[];
 	theme: 'auto' | 'light' | 'dark';
-	breakpoint: 'sm' | 'md' | 'lg';
+	breakpoint: Exclude<Breakpoint, 'base'>;
 	height: string;
 	minHeight: string;
 	label: string;
@@ -150,9 +150,7 @@ export class Editor {
 			label: opts.label ?? 'Page editor',
 			rawMarkers: opts.rawMarkers !== false,
 		};
-		const conv = getConverter(this.options.converter);
-		if (!conv) throw new Error(`BlockFusion: unknown converter "${this.options.converter}"`);
-		this.converter = conv;
+		this.converter = this.resolveConverter(this.options.converter);
 		this.media = opts.media ?? null;
 		this.codeEditor = opts.codeEditor ?? textareaCodeEditor;
 
@@ -163,7 +161,7 @@ export class Editor {
 		} else {
 			initial ??= target.innerHTML;
 		}
-		this.doc = initial && initial.trim() ? loadHTML(initial, this.converter) : emptyDoc();
+		this.doc = this.fitDoc(initial && initial.trim() ? loadHTML(initial, this.converter) : emptyDoc());
 
 		// Chrome: toolbar, then the canvas and side panel, then the live region.
 		this.root = h('div', {
@@ -241,7 +239,7 @@ export class Editor {
 	/** Replace the content. Markup from any known framework is converted. */
 	setHTML(html: string, opts: { label?: string } = {}): void {
 		const next = html.trim() ? loadHTML(html, this.converter) : emptyDoc();
-		this.replaceDoc(next, opts.label ?? 'Replace content');
+		this.replaceDoc(this.fitDoc(next), opts.label ?? 'Replace content');
 	}
 
 	getDoc(): Doc {
@@ -249,7 +247,7 @@ export class Editor {
 	}
 
 	setDoc(doc: Doc, opts: { label?: string } = {}): void {
-		this.replaceDoc(clone(doc), opts.label ?? 'Replace content');
+		this.replaceDoc(this.fitDoc(clone(doc)), opts.label ?? 'Replace content');
 	}
 
 	private replaceDoc(next: Doc, label: string): void {
@@ -260,12 +258,41 @@ export class Editor {
 		this.changed();
 	}
 
-	/** Switch the output framework. The content is re-rendered in its markup. */
-	setConverter(id: string, opts: { stylesheets?: string[]; bodyClass?: string } = {}): void {
+	/** Columns in the grid being edited (the converter's, 12 by default). */
+	get columns(): number {
+		return this.converter.columns ?? DEFAULT_COLUMNS;
+	}
+
+	/**
+	 * A registered converter, built for the `columns` option when that
+	 * differs from the converter's own grid size.
+	 */
+	private resolveConverter(id: string): Converter {
 		const conv = getConverter(id);
 		if (!conv) throw new Error(`BlockFusion: unknown converter "${id}"`);
+		const want = this.options.columns;
+		if (!want || want === (conv.columns ?? DEFAULT_COLUMNS)) return conv;
+		if (!conv.withColumns) {
+			console.warn(`BlockFusion: converter "${id}" has a fixed grid, ignoring columns: ${want}`);
+			return conv;
+		}
+		return conv.withColumns(want);
+	}
+
+	/** Bring a document to the grid size being edited. */
+	private fitDoc(doc: Doc): Doc {
+		return columnsOf(doc) === this.columns ? doc : scaleDoc(doc, this.columns);
+	}
+
+	/**
+	 * Switch the output framework. The content is re-rendered in its markup,
+	 * and spans are rescaled when the new grid has a different column count.
+	 */
+	setConverter(id: string, opts: { stylesheets?: string[]; bodyClass?: string } = {}): void {
+		const conv = this.resolveConverter(id);
 		this.converter = conv;
 		this.options.converter = id;
+		this.doc = this.fitDoc(this.doc);
 		if (opts.stylesheets) this.setStylesheets(opts.stylesheets);
 		if (opts.bodyClass !== undefined) this.setBodyClass(opts.bodyClass);
 		this.canvas.setGridStylesheet(conv.stylesheet ?? '');
@@ -556,7 +583,7 @@ export class Editor {
 
 	private restore(target: Doc, message: string): void {
 		const prev = this.doc;
-		this.doc = clone(target);
+		this.doc = this.fitDoc(clone(target));
 		const active = deepActiveElement();
 		const wasHandle = active?.getAttribute?.('data-bf-handle');
 		const handleId = wasHandle === 'row' ? active!.getAttribute('data-bf-for-row') : active?.getAttribute?.('data-bf-for-col');
@@ -633,7 +660,11 @@ export class Editor {
 
 	/** Neutral rows for a block. HTML blocks are detected and converted. */
 	blockRows(block: Block): Row[] {
-		return typeof block.rows === 'string' ? loadHTML(block.rows, this.converter).rows : clone(block.rows);
+		if (typeof block.rows === 'string') {
+			const doc = loadHTML(block.rows, this.converter);
+			return scaleRows(doc.rows, columnsOf(doc), this.columns);
+		}
+		return scaleRows(clone(block.rows), block.columns ?? DEFAULT_COLUMNS, this.columns);
 	}
 
 	/* ================================================== canvas events */

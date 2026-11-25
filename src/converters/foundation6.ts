@@ -1,15 +1,17 @@
 /**
  * Foundation 6 XY grid: `grid-x grid-padding-x` rows with `cell` columns
- * sized by `small-N medium-N large-N xlarge-N`.
+ * sized by `small-N medium-N large-N xlarge-N xxlarge-N` (xlarge and
+ * xxlarge need `$breakpoint-classes` to include them).
  */
 import { foundationButtons } from './foundation5';
 import { createGridConverter, spanParser } from './grid';
 
-const BP = { base: 'small', sm: 'medium', md: 'large', lg: 'xlarge' } as const;
+const BP: Record<string, string> = { base: 'small', sm: 'medium', md: 'large', lg: 'xlarge', xl: 'xxlarge' };
 
 export const foundation6 = createGridConverter({
 	id: 'foundation6',
 	name: 'Foundation 6',
+	breakpoints: ['base', 'sm', 'md', 'lg', 'xl'],
 	row: {
 		tokens: ['grid-x'],
 		defaults: [{ token: 'grid-padding-x', family: /^grid-(padding|margin)-x$/ }],
@@ -17,11 +19,12 @@ export const foundation6 = createGridConverter({
 	col: {
 		tokens: ['cell'],
 		spanClass: (bp, n) => `${BP[bp]}-${n}`,
-		parseSpan: spanParser(/^(small|medium|large|xlarge)-(\d+)$/, {
+		parseSpan: spanParser(/^(small|medium|large|xlarge|xxlarge)-(\d+)$/, {
 			small: 'base',
 			medium: 'sm',
 			large: 'md',
 			xlarge: 'lg',
+			xxlarge: 'xl',
 		}),
 		base12Implicit: true,
 	},
