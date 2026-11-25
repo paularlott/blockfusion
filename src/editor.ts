@@ -460,6 +460,13 @@ export class Editor {
 	 * same `key` replaces the last one; clearNotices(key) removes them.
 	 */
 	notify(message: string, kind: 'info' | 'error' = 'info', opts: { key?: string } = {}): void {
+		// The host's own notifications, when it gives them
+		if (this.options.notify) {
+			if (opts.key) this.clearNotices(opts.key);
+			const remove = this.options.notify(message, kind, opts);
+			if (typeof remove === 'function') this.hostNotices.push({ key: opts.key, remove });
+			return;
+		}
 		this.announce(message);
 		const host = toastHost();
 		if (opts.key) this.clearNotices(opts.key);
@@ -492,8 +499,20 @@ export class Editor {
 		arm();
 	}
 
+	/** Remove functions for messages shown by the host's notify. */
+	private hostNotices: Array<{ key?: string; remove: () => void }> = [];
+
 	/** Remove this editor's toasts: those with a key, or all of them. */
 	clearNotices(key?: string): void {
+		this.hostNotices = this.hostNotices.filter((n) => {
+			if (key && n.key !== key) return true;
+			try {
+				n.remove();
+			} catch {
+				/* already gone */
+			}
+			return false;
+		});
 		for (const t of Array.from(document.querySelectorAll<HTMLElement>('.bf-toasts > .bf-toast'))) {
 			if ((t as HTMLElement & { _bfEditor?: Editor })._bfEditor === this && (!key || t.dataset.key === key)) t.remove();
 		}

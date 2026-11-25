@@ -126,6 +126,7 @@ The toolbar sticks to the top of the window as the page scrolls, and an open sid
 | `codeEditor` | textarea | A code editor factory (see [the Ace example](#code-editor-hook-eg-ace)). |
 | `plugins` | `[]` | Extra [plugins](#plugins). |
 | `lang`, `dir` | page values | Language and direction of the content, set on the canvas. |
+| `notify` | the editor's toasts | `(message, kind, { key }) => remove?`: show the editor's messages with the page's own notifications. Return a function that removes the message. |
 
 The default toolbar ids are:
 
@@ -153,7 +154,7 @@ editor.undo(); editor.redo();
 editor.exec('bold');                    // run any command by id
 editor.focus();
 editor.announce('Saved');               // screen reader live region
-editor.notify('Saved', 'info');         // a toast under the toolbar (also announced); goes by itself
+editor.notify('Saved', 'info');         // a toast (also announced), or the host's own with the notify option
 editor.clearNotices();                  // remove toasts (all, or those with a key)
 editor.ready.then(() => {});            // canvas loaded
 editor.destroy();                       // restores the textarea (or writes the HTML back into the element)

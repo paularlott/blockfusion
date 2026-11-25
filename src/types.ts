@@ -272,6 +272,14 @@ export interface EditorOptions {
 	/** Colour mode the canvas starts in. Default 'light'. */
 	colorMode?: ColorMode;
 	/**
+	 * Show the editor's messages (dictation stopped, the assistant couldn't
+	 * help, ...) with the host page's own notifications instead of the
+	 * editor's toasts. The host shows and announces them. Return a function
+	 * that removes the message, so the editor can clear it later
+	 * (clearNotices); messages with the same key replace each other.
+	 */
+	notify?: (message: string, kind: 'info' | 'error', opts: { key?: string }) => void | (() => void);
+	/**
 	 * Speech to text (the Dictate button). Off by default. true uses the
 	 * browser's speech recognition where it exists; a provider uses that.
 	 */
