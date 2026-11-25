@@ -22,10 +22,10 @@ export const CANVAS_CSS = `
 /* The typing area shows on hover; the column's empty space also takes clicks (see Editor.onCanvasPointerDown) */
 [data-bf-col]:hover > .bf-col-content { outline-color: var(--bf-c-line); }
 [data-bf-col] > .bf-col-content:focus { outline-color: transparent; box-shadow: 0 0 0 2px var(--bf-c-ring); }
-/* An empty column (no content, or the single empty paragraph a new one gets): a taller, outlined area with a prompt */
-[data-bf-col] > .bf-col-content:is(:empty, :has(> p:only-child > br:only-child)) { min-height: 5em; outline: 1px dashed var(--bf-c-line); }
+/* An empty column (no content, or the single empty paragraph a new one gets): outlined, with a prompt */
+[data-bf-col] > .bf-col-content:is(:empty, :has(> p:only-child > br:only-child)) { outline: 1px dashed var(--bf-c-line); }
 [data-bf-col] > .bf-col-content:is(:empty, :has(> p:only-child > br:only-child))::before {
-	content: attr(data-placeholder); position: absolute; inset: 0.5em auto auto 0.5em; pointer-events: none;
+	content: attr(data-placeholder); position: absolute; inset: 0 auto auto 0.25em; pointer-events: none;
 	color: var(--bf-c-muted); font: italic 15px/1.4 system-ui, sans-serif;
 }
 [data-bf-col] > .bf-col-content:is(:empty, :has(> p:only-child > br:only-child)):focus::before { content: none; }
