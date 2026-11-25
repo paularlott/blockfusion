@@ -21,7 +21,7 @@ import {
 import type { Editor } from '../editor';
 import { findCol, findRow, spanAt } from '../model/doc';
 import type { HandleAction, Plugin } from '../types';
-import { h, nextId } from '../ui/dom';
+import { checkbox } from '../ui/dialog';
 import { codeDialog } from '../ui/dialogs/code';
 import { layoutDialog } from '../ui/dialogs/layout';
 import { settingsDialog } from '../ui/dialogs/settings';
@@ -39,32 +39,16 @@ async function addRowFlow(editor: Editor, where: InsertAt, title?: string): Prom
 	if (spans) insertRow(editor, spans, where);
 }
 
-/** A radio with a label and a hint under it, for a small choice in a dialog. */
-function radioChoice(name: string, value: string, label: string, hint: string, checked: boolean): { wrap: HTMLElement; input: HTMLInputElement } {
-	const id = nextId('bf-rc');
-	const hintId = `${id}-hint`;
-	const input = h('input', { type: 'radio', className: 'bf-radio', name, value, id, checked, 'aria-describedby': hintId });
-	const wrap = h(
-		'div',
-		{ className: 'bf-choice' },
-		input,
-		h('div', {}, h('label', { for: id }, label), h('p', { className: 'bf-hint', id: hintId }, hint)),
-	);
-	return { wrap, input };
-}
-
 async function addRawFlow(editor: Editor, where: InsertAt): Promise<void> {
-	const name = nextId('bf-rawlayout');
-	const grid = radioChoice(name, 'grid', 'In a row and column', 'Follows the page grid like any other row, and can have more columns added.', true);
-	const custom = radioChoice(name, 'custom', 'Custom row', 'Only your code, with no row or column markup around it.', false);
-	const layout = h('fieldset', { className: 'bf-fieldset bf-choices' }, h('legend', { className: 'bf-label' }, 'Layout'), grid.wrap, custom.wrap);
+	// Code goes in a row and column (following the page grid) unless asked otherwise
+	const custom = checkbox('Custom row, without row and column markup');
 	const code = await codeDialog(editor, {
 		title: 'Add HTML or JavaScript',
 		label: 'Code',
 		value: '',
 		description: 'The code is written to the page exactly as entered. Scripts do not run in the editor; use Preview to try them safely.',
 		submitLabel: 'Add',
-		extra: layout,
+		after: custom.wrap,
 	});
 	if (code !== null) insertRaw(editor, code, where, custom.input.checked ? 'custom' : 'grid');
 }
