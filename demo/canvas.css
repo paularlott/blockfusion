@@ -1,15 +1,23 @@
-/* Content styles for the demo canvas when the framework has none (Tailwind, CSS grid). */
-body.demo-plain { margin: 0; padding: 0 1.25rem; font: 16px/1.6 system-ui, sans-serif; color: #0f172a; }
+/*
+ * Content styles for the demo canvas when the framework has none (Tailwind,
+ * CSS grid). Colours here are for CSS grid; the Tailwind demo (demo-tw) gets
+ * its colours, light and dark, from its own build (see scripts/vendor.mjs).
+ */
+body.demo-plain { margin: 0; padding: 0 1.25rem; font: 16px/1.6 system-ui, sans-serif; }
+body.demo-plain:not(.demo-tw) { color: #0f172a; }
 .demo-plain h1 { font-size: 2.25rem; font-weight: 700; margin: 0.5em 0; line-height: 1.2; }
 .demo-plain h2 { font-size: 1.75rem; font-weight: 700; margin: 0.5em 0; line-height: 1.25; }
 .demo-plain h3 { font-size: 1.25rem; font-weight: 650; margin: 0.5em 0; }
 .demo-plain p, .demo-plain ul, .demo-plain ol, .demo-plain blockquote, .demo-plain pre { margin: 0 0 1em; }
 .demo-plain ul { list-style: disc; padding-left: 1.5em; }
 .demo-plain ol { list-style: decimal; padding-left: 1.5em; }
-.demo-plain blockquote { border-left: 4px solid #cbd5e1; padding-left: 1em; color: #334155; }
-.demo-plain a:not([class]) { color: #1d4ed8; text-decoration: underline; }
+.demo-plain blockquote { border-left: 4px solid; padding-left: 1em; }
+.demo-plain:not(.demo-tw) blockquote { border-color: #cbd5e1; color: #334155; }
+.demo-plain a:not([class]) { text-decoration: underline; }
+.demo-plain:not(.demo-tw) a:not([class]) { color: #1d4ed8; }
 .demo-plain img { max-width: 100%; height: auto; }
-.demo-plain pre { background: #f1f5f9; padding: 0.75em; overflow: auto; }
+.demo-plain pre { padding: 0.75em; overflow: auto; }
+.demo-plain:not(.demo-tw) pre { background: #f1f5f9; }
 /* fusionCSS and Foundation pages without a container get side padding. */
 body.demo-pad { padding: 0 1rem; }
 img { max-width: 100%; height: auto; }

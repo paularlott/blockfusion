@@ -545,7 +545,7 @@ npm run demo         # serves the repo on http://localhost:8080; open /demo/
 
 The demo (`demo/index.html`) runs the editor on a textarea in a form. It has:
 
-- a framework switcher;
+- a framework switcher (Bootstrap 5 and 6 and the Tailwind build have a dark mode, so the Preview dark mode toggle shows for them);
 - a light/dark toggle;
 - a demo media provider, whose uploads become data URLs;
 - a "Show output" panel;

@@ -1,7 +1,7 @@
 /**
  * Refresh the framework stylesheets the demo uses, from npm (run once; the
  * results are committed so the demo needs no network):
- *   node scripts/vendor.mjs [path/to/fusionCSS] [path/to/axe.min.js]
+ *   node scripts/vendor.mjs [--tailwind-only] [path/to/fusionCSS] [path/to/axe.min.js]
  * Packages are fetched with `npm pack` into a temporary folder and only
  * their CSS is copied. The Tailwind build runs the Tailwind CLI over the
  * classes the converter writes. axe-core is copied for local testing only
@@ -14,8 +14,10 @@ import { join, resolve } from 'node:path';
 
 const out = resolve('demo/vendor');
 mkdirSync(out, { recursive: true });
-const fusionDir = resolve(process.argv[2] ?? join(process.env.HOME ?? '', 'Code/fusionCSS'));
-const axe = process.argv[3] ? resolve(process.argv[3]) : null;
+const tailwindOnly = process.argv.includes('--tailwind-only');
+const args = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const fusionDir = resolve(args[0] ?? join(process.env.HOME ?? '', 'Code/fusionCSS'));
+const axe = args[1] ? resolve(args[1]) : null;
 
 const packages = [
 	['bootstrap@3.4.1', 'package/dist/css/bootstrap.min.css', 'bootstrap3.min.css'],
@@ -25,7 +27,7 @@ const packages = [
 	['foundation-sites@6.9.0', 'package/dist/css/foundation.min.css', 'foundation6.min.css'],
 ];
 
-for (const [spec, file, name] of packages) {
+for (const [spec, file, name] of tailwindOnly ? [] : packages) {
 	// Each package goes into its own empty folder and is only read as data.
 	const dir = mkdtempSync(join(tmpdir(), 'bf-vendor-'));
 	try {
@@ -38,7 +40,9 @@ for (const [spec, file, name] of packages) {
 	}
 }
 
-if (existsSync(join(fusionDir, 'css/fusioncss.visibility.css'))) {
+if (tailwindOnly) {
+	/* skip fusionCSS */
+} else if (existsSync(join(fusionDir, 'css/fusioncss.visibility.css'))) {
 	copyFileSync(join(fusionDir, 'css/fusioncss.visibility.css'), join(out, 'fusioncss.min.css'));
 	console.log('fusionCSS -> demo/vendor/fusioncss.min.css');
 } else console.warn('fusionCSS not found at', fusionDir);
@@ -55,6 +59,14 @@ try {
 			`@source "${resolve('demo')}";`,
 			'@source inline("{sm:,md:,lg:,}col-span-{1,2,3,4,5,6,7,8,9,10,11,12}");',
 			'@source inline("{sm:,md:,lg:,}{hidden,block} grid grid-cols-12 gap-6");',
+			// The demo page's own colours, light and dark (dark follows prefers-color-scheme,
+			// Tailwind's default), so the editor's dark preview has something to show.
+			'@layer base {',
+			'  body.demo-tw { @apply bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100; }',
+			'  .demo-tw blockquote { @apply border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-300; }',
+			'  .demo-tw a:not([class]) { @apply text-blue-700 dark:text-sky-300; }',
+			'  .demo-tw pre { @apply bg-slate-100 dark:bg-slate-800; }',
+			'}',
 		].join('\n'),
 	);
 	execFileSync('npm', ['install', '--silent', '--no-save', '--ignore-scripts', '--prefix', twDir, 'tailwindcss@4.3.5', '@tailwindcss/cli@4.3.5'], { stdio: 'inherit' });
