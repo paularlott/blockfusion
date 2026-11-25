@@ -33,7 +33,9 @@ export interface LocalAssistantOptions {
 	imageModel?: string | false;
 	/**
 	 * Where models are downloaded from: Hugging Face by default, or your own
-	 * copy, laid out as `${modelHost}${model}/resolve/main/…`.
+	 * copy, laid out as `${modelHost}${model}/resolve/main/…`. A relative path is
+	 * resolved against the page. Your server should answer ranged GET requests
+	 * (a plain 200 is fine).
 	 */
 	modelHost?: string;
 	/** 'auto' (WebGPU when available), 'webgpu' or 'wasm'. */
@@ -51,7 +53,9 @@ function load(o: LocalAssistantOptions): Promise<TJ> {
 	lib ??= import('@huggingface/transformers').then((t) => {
 		const wasm = t.env.backends.onnx.wasm;
 		if (wasm) wasm.wasmPaths = new URL('./ort/', import.meta.url).href;
-		if (o.modelHost) t.env.remoteHost = o.modelHost;
+		// transformers.js only probes absolute http(s) URLs (a relative host makes
+		// it think the tokenizer is missing), so resolve the host against the page.
+		if (o.modelHost) t.env.remoteHost = new URL(o.modelHost, document.baseURI).href;
 		t.env.allowLocalModels = false;
 		return t;
 	});
