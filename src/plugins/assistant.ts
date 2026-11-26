@@ -445,7 +445,13 @@ export const assistantPlugin: Plugin = {
 			}
 			return items;
 		};
-		const place = { after: editor.commands.has('readAloud') ? 'readAloud' : editor.commands.has('dictate') ? 'dictate' : 'image' };
+		// At the end of the toolbar, before Help. Built-in buttons may be added
+		// after this plugin installs, so place it once the editor is ready.
+		const addItem = (item: Parameters<Editor['addToolbarItem']>[0]) => {
+			const put = () => editor.addToolbarItem(item, editor.commands.has('help') ? { before: 'help' } : undefined);
+			if (editor.isReady) put();
+			else editor.on('ready', put);
+		};
 		if (chatPop) {
 			// Chat (and a shortcut straight to it): the button opens it, and the
 			// arrow beside it the actions, when there are any
@@ -458,13 +464,13 @@ export const assistantPlugin: Plugin = {
 				isActive: () => chatPop.isOpen,
 			});
 			if (actions.length || describe) {
-				editor.addToolbarItem({ type: 'split', id: 'assistant', command: 'assistantChat', label: 'Assistant chat', icon: 'sparkle', menuLabel: 'Assistant actions', items: menuItems }, place);
+				addItem({ type: 'split', id: 'assistant', command: 'assistantChat', label: 'Assistant chat', icon: 'sparkle', menuLabel: 'Assistant actions', items: menuItems });
 			} else {
-				editor.addToolbarItem({ type: 'button', id: 'assistant', command: 'assistantChat', toggle: true }, place);
+				addItem({ type: 'button', id: 'assistant', command: 'assistantChat', toggle: true });
 			}
 			return () => chatPop.destroy();
 		}
 		// No chat: the button is just the menu of actions
-		editor.addToolbarItem({ type: 'menu', id: 'assistant', label: 'Assistant', icon: 'sparkle', items: menuItems }, place);
+		addItem({ type: 'menu', id: 'assistant', label: 'Assistant', icon: 'sparkle', items: menuItems });
 	},
 };

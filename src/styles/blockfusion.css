@@ -807,6 +807,20 @@
 	color: var(--bf-fg);
 	font: inherit;
 }
+/* Selects: the editor's own arrow, clear of the border (the native one sits
+   tight against it), drawn in the text colour so it follows the theme */
+select.bf-input {
+	appearance: none;
+	padding-inline-end: 34px;
+	background-image:
+		linear-gradient(45deg, transparent 50%, currentColor 50%),
+		linear-gradient(135deg, currentColor 50%, transparent 50%);
+	background-position:
+		right 16px center,
+		right 11px center;
+	background-size: 5px 5px;
+	background-repeat: no-repeat;
+}
 .bf-input:disabled {
 	background: var(--bf-surface-2);
 	color: var(--bf-fg-muted);
@@ -962,6 +976,11 @@
 }
 
 @media (forced-colors: active) {
+	select.bf-input {
+		appearance: auto;
+		background-image: none;
+		padding-inline-end: 10px;
+	}
 	.bf-tbtn,
 	.bf-btn,
 	.bf-menu-item,
