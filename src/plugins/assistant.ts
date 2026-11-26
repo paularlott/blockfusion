@@ -5,11 +5,14 @@
  * (streamed as it's written), and replaces the text only when accepted, as
  * one undoable step. Image descriptions are in the image dialog.
  *
- * Only plain text goes to the assistant and comes back, so inline
- * formatting inside the replaced text (bold, links) is not kept.
+ * Formatting goes to the assistant as Markdown-style marks (**bold**,
+ * *italic*, [link text](1) ...) and is rebuilt from the original elements
+ * when the text is replaced (see assistant/marked.ts). Each paragraph or list
+ * item keeps its own element.
  */
 import type { Editor } from '../editor';
 import { addAssistantStyles } from '../assistant/styles';
+import { type Marks, type Own, rebuild, toMarked } from '../assistant/marked';
 import { PAGE_TOOLS, callKey, pageContext, runPageTool } from '../assistant/tools';
 import type { AssistantAction, AssistantMessage, ImageDialogHook, MenuItem, Plugin } from '../types';
 import { openDialog } from '../ui/dialog';
@@ -29,21 +32,46 @@ const actionsOf = (editor: Editor) => editor.options.assistantActions ?? DEFAULT
 const BLOCKS = 'p, h1, h2, h3, h4, h5, h6, li, blockquote, pre, td, th, figcaption';
 
 /**
- * The selection, else the block the caret is in (then `block` is set, so the
- * result can go into that element and keep its tag and attributes).
+ * What a quick action rewrites: the paragraphs (or list items, headings ...)
+ * the selection covers, or the one the caret is in, each kept as its own
+ * element; or, for a selection inside one paragraph, just that part.
  */
-function targetRange(editor: Editor): { range: Range; block: HTMLElement | null } | null {
+interface Target {
+	range: Range;
+	/** Whole blocks to rewrite, or null for part of one. */
+	blocks: HTMLElement[] | null;
+}
+
+function targetRange(editor: Editor): Target | null {
 	const r = editor.canvas.range;
 	if (!r) return null;
-	if (!r.collapsed) return { range: r.cloneRange(), block: null };
-	const node = r.startContainer.nodeType === 1 ? (r.startContainer as Element) : r.startContainer.parentElement;
-	const block = node?.closest<HTMLElement>(BLOCKS);
-	const content = node?.closest('[data-bf-content]');
-	if (!block || !content?.contains(block)) return null;
+	const at = (n: Node) => (n.nodeType === 1 ? (n as Element) : n.parentElement);
+	const content = at(r.startContainer)?.closest<HTMLElement>('[data-bf-content]');
+	if (!content) return null;
 	const all = editor.canvas.doc.createRange();
-	all.selectNodeContents(block);
-	return { range: all, block };
+	if (r.collapsed) {
+		const block = at(r.startContainer)?.closest<HTMLElement>(BLOCKS);
+		if (!block || !content.contains(block)) return null;
+		all.selectNodeContents(block);
+		return { range: all, blocks: [block] };
+	}
+	// Inside one block: just the selected part
+	const startBlock = at(r.startContainer)?.closest(BLOCKS);
+	if (startBlock && startBlock === at(r.endContainer)?.closest(BLOCKS)) return { range: r.cloneRange(), blocks: null };
+	// Across blocks: every innermost block it touches, whole
+	const blocks = Array.from(content.querySelectorAll<HTMLElement>(BLOCKS)).filter(
+		(b) => r.intersectsNode(b) && !b.querySelector(BLOCKS) && !!b.textContent?.trim(),
+	);
+	if (!blocks.length) return null;
+	all.setStartBefore(blocks[0]);
+	all.setEndAfter(blocks[blocks.length - 1]);
+	return { range: all, blocks };
 }
+
+/** How the marks are explained to the model, added to the action's instruction. */
+const MARKS_RULE =
+	'The text marks its formatting: **bold**, *italic*, `code`, and [words](1) for a link or styled words. ' +
+	'Keep each mark around the words it belongs to, and keep every [..](n) with its number.';
 
 async function rewriteFlow(editor: Editor, action: AssistantAction): Promise<void> {
 	const label = action.label;
@@ -56,6 +84,24 @@ async function rewriteFlow(editor: Editor, action: AssistantAction): Promise<voi
 		editor.notify('Select some text, or put the cursor in a paragraph, first.', 'info', { key: 'assistant' });
 		return;
 	}
+	// The text with its formatting as marks; each block a paragraph of its own
+	const marks: Marks = { refs: [], spans: [] };
+	const owned: Own[] = [];
+	const parts = (target.blocks ?? [range.cloneContents()]).map((node) => {
+		const r0 = marks.refs.length;
+		const s0 = marks.spans.length;
+		const m = toMarked(node, marks);
+		const span = (from: number, to: number) => Array.from({ length: to - from }, (_, i) => from + i);
+		owned.push({ refs: span(r0, marks.refs.length).map((i) => i + 1), spans: span(s0, marks.spans.length) });
+		return m.text;
+	});
+	const refs = marks.refs;
+	const hasMarks = marks.spans.length > 0 || refs.length > 0;
+	const paragraphs = (text: string) => text.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+	// A paragraph's own formatting; one paragraph (part of a block) owns it all
+	const ownedFor = (i: number): Own | undefined => (target.blocks ? owned[i] ?? { refs: [], spans: [] } : undefined);
+	const instruction = [action.prompt, hasMarks ? MARKS_RULE : ''].filter(Boolean).join(' ');
+
 	// Show what will be replaced
 	const d = editor.canvas.doc;
 	const sel = d.getSelection()!;
@@ -90,22 +136,33 @@ async function rewriteFlow(editor: Editor, action: AssistantAction): Promise<voi
 	});
 
 	const lang = editor.canvas.doc.documentElement.lang || document.documentElement.lang || 'en';
-	provider
-		.rewrite({
-			text: original,
-			task: action.id,
-			instruction: action.prompt,
-			lang,
-			signal: abort.signal,
-			onToken: (t) => {
-				result += t;
-				output.value = result;
-				status.textContent = 'Writing…';
-			},
-			onProgress: (p) => {
-				status.textContent = p.progress !== undefined ? `${p.text} (${Math.round(p.progress * 100)}%)` : p.text;
-			},
-		})
+	// One request per paragraph, so each one's suggestion goes back into the
+	// same element (small models merge paragraphs when given several)
+	const replies: string[] = [];
+	(async () => {
+		for (const part of parts) {
+			let streamed = '';
+			const reply = await provider.rewrite!({
+				text: part,
+				task: action.id,
+				instruction,
+				lang,
+				signal: abort.signal,
+				onToken: (t) => {
+					streamed += t;
+					output.value = [...replies, streamed].join('\n\n');
+					status.textContent = parts.length > 1 ? `Writing paragraph ${replies.length + 1} of ${parts.length}…` : 'Writing…';
+				},
+				onProgress: (p) => {
+					status.textContent = p.progress !== undefined ? `${p.text} (${Math.round(p.progress * 100)}%)` : p.text;
+				},
+			});
+			// A reply stays one paragraph
+			replies.push(reply.trim().replace(/\n{2,}/g, ' '));
+			output.value = replies.join('\n\n');
+		}
+		return replies.join('\n\n');
+	})()
 		.then((text) => {
 			result = text.trim();
 			output.value = result;
@@ -117,6 +174,9 @@ async function rewriteFlow(editor: Editor, action: AssistantAction): Promise<voi
 			}
 			output.readOnly = false;
 			status.textContent = `Suggested by ${provider.name ?? 'the assistant'}. Check it, edit it if you like, then replace your text.`;
+			// Formatting that can't be put back: its words were changed as well
+			const lost = paragraphs(result).flatMap((p, i) => rebuild(p, marks, d, ownedFor(i)).lost);
+			if (lost.length) status.textContent += ` Formatting on ${lost.map((t) => `“${t}”`).join(', ')} can’t be kept, as the wording changed; add it again after replacing.`;
 			if (replaceBtn) replaceBtn.disabled = false;
 			output.focus();
 			editor.announce('Suggestion ready to check and edit');
@@ -130,35 +190,48 @@ async function rewriteFlow(editor: Editor, action: AssistantAction): Promise<voi
 	const ok = await dialog;
 	abort.abort();
 	if (!ok || !done || !result) return;
-	const paras = result.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+	const paras = paragraphs(result);
 	// Change the DOM directly rather than through the browser's editing
 	// commands, which can take the paragraph element away with its contents.
 	editor.runText(label, (doc) => {
-		const block = target.block;
-		if (block?.isConnected) {
-			// The whole paragraph: its element stays (tag, class, attributes); extra
-			// paragraphs follow it (list items in a list)
-			block.textContent = paras[0] ?? '';
-			let after: Element = block;
-			for (const p of paras.slice(1)) {
-				const next = doc.createElement(block.tagName === 'LI' ? 'li' : 'p');
-				next.textContent = p;
+		const blocks = target.blocks?.filter((b) => b.isConnected);
+		let last: Node | null = null;
+		if (blocks?.length) {
+			// Each block keeps its element (tag, class, attributes) and gets its paragraph
+			blocks.forEach((block, i) => {
+				if (i >= paras.length) {
+					// Fewer paragraphs came back: drop the rest (a table cell is emptied instead)
+					if (/^T[DH]$/.test(block.tagName)) block.textContent = '';
+					else block.remove();
+					return;
+				}
+				block.replaceChildren(rebuild(paras[i], marks, doc, ownedFor(i)).frag);
+				last = block;
+			});
+			// More came back: they follow the last block (list items in a list)
+			let after = (last ?? blocks[0]) as HTMLElement;
+			for (const p of paras.slice(blocks.length)) {
+				const next = doc.createElement(after.tagName === 'LI' ? 'li' : 'p');
+				next.append(rebuild(p, marks, doc, { refs: [], spans: [] }).frag);
 				after.after(next);
 				after = next;
 			}
+			last = after;
 			const r = doc.createRange();
-			r.selectNodeContents(after);
+			r.selectNodeContents(last as Node);
 			r.collapse(false);
 			doc.getSelection()!.removeAllRanges();
 			doc.getSelection()!.addRange(r);
 			return;
 		}
-		// Part of a paragraph: swap just the selected text
-		const node = doc.createTextNode(paras.join(' '));
+		// Part of a paragraph: swap just the selected part
+		const frag = rebuild(paras.join(' '), marks, doc).frag;
+		const end = frag.lastChild;
 		range.deleteContents();
-		range.insertNode(node);
+		range.insertNode(frag);
 		const r = doc.createRange();
-		r.setStartAfter(node);
+		if (end) r.setStartAfter(end);
+		else r.setStart(range.startContainer, range.startOffset);
 		r.collapse(true);
 		doc.getSelection()!.removeAllRanges();
 		doc.getSelection()!.addRange(r);
