@@ -18,17 +18,23 @@ npm install
 npm run build    # dist/blockfusion-ai.mjs, dist/chunks/, dist/ort/
 ```
 
-`dist/ort/` holds ONNX Runtime's WebAssembly builds, served from beside the module so nothing comes from a CDN. A browser fetches only the one it uses.
+`dist/ort/` holds the ONNX Runtime WebAssembly build that transformers.js uses (for WebGPU and the CPU alike), served from beside the module so nothing comes from a CDN.
 
 ## Use
 
 ```html
 <script src="blockfusion.js"></script>
+<!-- The assistant's UI: registers itself with the editor -->
+<script src="blockfusion-assistant.js"></script>
 <script type="module">
 	import { localAssistant } from './blockfusion-ai/blockfusion-ai.mjs';
-	BlockFusion.create(el, { assistant: localAssistant() });
+	BlockFusion.create(el, { assistant: localAssistant(), assistantChat: true });
 </script>
 ```
+
+Without `blockfusion-assistant.js` (or `assistantPlugin` from its module), the `assistant` option does nothing.
+
+To serve the models from your own server, set `modelHost` to a copy laid out as `${modelHost}${model}/resolve/main/…` (as on Hugging Face). A relative address is resolved against the page, and the server should answer ranged GET requests (a plain 200 is fine).
 
 Options:
 

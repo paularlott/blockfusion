@@ -1,7 +1,8 @@
 # AGENTS.md
 
 Guidance for coding agents working on BlockFusion. `README.md` is the user-facing reference
-(options, API, converters, blocks, plugins, accessibility). `ARCHITECTURE.md` explains the
+(options, API, converters, blocks, plugins, dictation, read aloud, the AI assistant,
+accessibility). `ARCHITECTURE.md` explains the
 design. This file covers the conventions and pitfalls that matter when changing the code.
 
 ## Commands
@@ -12,8 +13,10 @@ npm run typecheck   # tsc --noEmit
 npm test            # vitest + jsdom
 ```
 
-All three must pass before a commit. `demo/index.html` runs from `file://` and uses the
-built `dist/`, so rebuild before checking anything in a browser.
+All three must pass before a commit. The demos use the built `dist/`, so rebuild before
+checking anything in a browser, and serve them with `npm run demo` (they fetch files, which
+doesn't work from `file://`). After changing `extensions/ai`, build it too
+(`npm --prefix extensions/ai run build`).
 
 ## How the editor is put together
 
@@ -41,6 +44,22 @@ built `dist/`, so rebuild before checking anything in a browser.
   special-casing the editor.
 - **The media provider** (`editor.media`) is optional. Every file-picking feature must still
   work with a typed URL when it's absent.
+
+## The AI assistant
+
+- **It stays out of the core.** The assistant's UI and `completionsAssistant` are in their own
+  bundle (`src/assistant`, `src/plugins/assistant.ts`); in-browser models are a separate package
+  (`extensions/ai`). Nothing in `blockfusion.js` may import them.
+- **Providers are interchangeable.** The editor only calls `rewrite`, `chat` and
+  `describeImage` (`AssistantProvider` in `src/types.ts`). Prompts for server models are built in
+  `src/assistant/completions.ts`; the relay (`examples/relay.mjs`) must stay a pass-through.
+- **Model output is untrusted.** HTML from a model goes through `sanitizeHtml`
+  (`src/assistant/sanitize.ts`); marked text through `rebuild` (`src/assistant/marked.ts`), which
+  only makes `strong`, `em`, `code`, `br` and clones of the original elements. Never insert a
+  reply as HTML any other way.
+- **Small models are unreliable.** Rewrite each paragraph separately, and don't rely on a model
+  keeping marks or structure; check what came back (as `rebuild` does) and tell the author what
+  couldn't be kept.
 
 ## Styling
 

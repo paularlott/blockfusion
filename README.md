@@ -5,10 +5,13 @@ BlockFusion is a WYSIWYG page-content editor built on rows, columns and blocks. 
 - fusionCSS
 - Bootstrap 3
 - Bootstrap 5
+- Bootstrap 6 (alpha)
 - Foundation 5
 - Foundation 6
 - Tailwind CSS
 - plain CSS grid
+
+Optional extras: dictation, read aloud, and an AI assistant (models in the browser or on your server).
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the design.
 
@@ -118,8 +121,6 @@ Normal form posts therefore just work. On any other element, its current HTML be
 | `chordKey` | `'Mod+;'` | First key of the two-step shortcuts (Mod+; then B opens the block menu). `false` turns them off. |
 | `breakpoint` | `'md'` | Breakpoint that new layouts and resizes apply to (`sm`, `md`, `lg`, `xl` or `xxl`). Columns stack below it. |
 | `height` | `'auto'` | `'auto'` grows the canvas with its content. Any CSS length fixes it and scrolls. |
-
-The toolbar sticks to the top of the window as the page scrolls, and an open side panel stays just below it. A host page with its own sticky bar sets the CSS variable `--bf-sticky-top` (on the editor or an ancestor) to that bar's height, so the toolbar sits below it.
 | `minHeight` | `'320px'` | Minimum canvas height in auto mode. |
 | `label` | `'Page editor'` | Accessible name of the editor region. |
 | `rawMarkers` | `true` | Wrap raw code in `<!--bf:raw-->…<!--/bf:raw-->` so it's recognised again on load. |
@@ -128,16 +129,23 @@ The toolbar sticks to the top of the window as the page scrolls, and an open sid
 | `plugins` | `[]` | Extra [plugins](#plugins). |
 | `lang`, `dir` | page values | Language and direction of the content, set on the canvas. |
 | `notify` | the editor's toasts | `(message, kind, { key }) => remove?`: show the editor's messages with the page's own notifications. Return a function that removes the message. |
+| `dictation` | `false` | `true`, or a speech provider, for the microphone button (see [Dictation](#dictation)). |
+| `readAloud` | `false` | `true`, or `{ voice, rate }`, for the Read aloud button (see [Read aloud](#read-aloud)). |
+| `assistant` | none | An AI [assistant provider](#ai-assistant). Needs the assistant bundle. |
+| `assistantActions` | four defaults | The assistant's one-shot actions, `[{ id, label, prompt }]`; `[]` for none. |
+| `assistantChat` | `false` | Offer the assistant's chat, when the provider can chat. |
+
+The toolbar sticks to the top of the window as the page scrolls, and an open side panel stays just below it. A host page with its own sticky bar sets the CSS variable `--bf-sticky-top` (on the editor or an ancestor) to that bar's height, so the toolbar sits below it.
 
 The default toolbar ids are:
 
 ```
 undo redo | block font size | bold italic underline strike subscript superscript color clear |
-ul ol outdent indent quote | alignLeft alignCenter alignRight alignJustify | link image dictate readAloud assistant | blocks addRow addRaw width colorMode |
-source check help
-
-`colorMode` only appears when the editor knows how the site switches light and dark, and `blocks` (with the canvas's Add block button) only when blocks are set up: the built-in ones, the `blocks` option or `blocksUrl` (shown straight away, while it loads), or blocks added with `addBlocks()`.
+ul ol outdent indent quote | alignLeft alignCenter alignRight alignJustify | link image dictate readAloud | blocks addRow addRaw width colorMode |
+source check assistant help
 ```
+
+`width` is Preview width (see how the page looks at each breakpoint). `dictate`, `readAloud` and `assistant` appear only when turned on; the assistant adds its button before `help`. `colorMode` only appears when the editor knows how the site switches light and dark, and `blocks` (with the canvas's Add block button) only when blocks are set up: the built-in ones, the `blocks` option or `blocksUrl` (shown straight away, while it loads), or blocks added with `addBlocks()`.
 
 ## API
 
@@ -160,14 +168,25 @@ editor.clearNotices();                  // remove toasts (all, or those with a k
 editor.ready.then(() => {});            // canvas loaded
 editor.destroy();                       // restores the textarea (or writes the HTML back into the element)
 
-editor.on('change', () => {});
+editor.setMediaProvider(provider);      // see Media provider
+editor.addBlocks(blocks); editor.loadBlocks(url);
+editor.refreshSiteTheme();              // re-detect the site's colour mode after its CSS changes
+editor.focusCanvas();                   // put the caret back in the content
+editor.readCol(colId);                  // a column's content as clean HTML
+editor.togglePanel('blocks'); editor.showPanel(id); editor.closePanel();
+
+editor.on('change', () => {});          // editor.off(event, fn) removes a listener
 editor.on('ready', () => {});
 editor.on('selectionchange', ({ rowId, colId }) => {});
 editor.on('converterchange', ({ id }) => {});
 editor.on('colormodechange', ({ mode }) => {});
 editor.on('sitethemechange', ({ available }) => {});
+editor.on('blockschange', () => {});    // blocks added or loaded
+editor.on('destroy', () => {});
 
 BlockFusion.use(plugin);                // add a plugin to every editor created from now on
+BlockFusion.get(element);               // the editor created on an element
+BlockFusion.version;
 ```
 
 Global helpers on `BlockFusion` include:
@@ -177,9 +196,13 @@ Global helpers on `BlockFusion` include:
 - `loadHTML(html)`, which parses into the neutral model;
 - `cleanPaste(html)` and `textToHtml(text)`;
 - `createGridConverter` and `spanParser`;
-- `DEFAULT_BLOCKS`, `CSSGRID_STYLESHEET`, `cssGridStylesheet(columns)`, `History`;
+- `builtinConverters` and `parseWith(converter, html)`;
+- `DEFAULT_BLOCKS`, `placeholder(w, h, label)` (an SVG placeholder image for blocks), `CSSGRID_STYLESHEET`, `cssGridStylesheet(columns)`, `History`;
+- `checkContent(editor)`, the Contrast checker's findings as data;
+- `webSpeechDictation()`, the browser's speech recognition as a dictation provider;
 - `model`, the pure model operations;
-- `plugins`, the built-in plugins.
+- `plugins`, the built-in plugins;
+- `Editor`, the editor class.
 
 ## Converters
 
@@ -431,7 +454,7 @@ The **Assistant** button (sparkle icon) is a split button when chat is on: the b
 
 - **Images:** the image dialog gets **Suggest a description**, which fills in the alt text for the author to check and edit; **Describe the selected image…** opens it for the selected image and starts straight away.
 - **One-shot actions** on the selection or the paragraph the cursor is in. The suggestion streams into a dialog, where the author can edit it; **Replace text** applies it as one undo step. Each paragraph or list item is rewritten in its own request and keeps its element and attributes, and inline formatting (bold, links, styled text) is kept; see [Formatting](#formatting-in-rewrites).
-- **Chat** (`assistantChat: true`): the Assistant button (or Mod+; then A) opens a popover, centred under the toolbar, to talk to the assistant and have it change the page: "add a row with 3 columns", "in row 2 column 1 write a short welcome". The model sees an outline of the page (rows, columns, the start of their text, the cursor) and can add rows, write into columns and type at the cursor; there's no delete. Each change is an undo step, and the latest request's changes have an Undo button in the chat. The conversation, and a request still running, carry on while the chat is closed. A request stops when the model says it's done, repeats itself, or after six rounds.
+- **Chat** (`assistantChat: true`): the Assistant button (or Mod+; then A) opens a popover, centred under the toolbar, to talk to the assistant and have it change the page: "add a row with 3 columns", "in row 2 column 1 write a short welcome". The model sees an outline of the page (rows, columns, the start of their text, the cursor) and can add rows, write into columns and type at the cursor; there's no delete. Text it writes can carry `**bold**`, `*italic*` and `` `code` ``, which become formatting. Each change is an undo step, and the latest request's changes have an Undo button in the chat. The conversation, and a request still running, carry on while the chat is closed. A request stops when the model says it's done, repeats itself, or after six rounds.
 
 ```js
 BlockFusion.create(el, {
@@ -465,7 +488,7 @@ BlockFusion.create(el, {
 
 ### A model on your server
 
-`completionsAssistant` builds the prompts, tool calls and image requests in the page and sends them in the OpenAI chat completions format, so your backend only relays them to a model server: it adds the model and API key, and checks the user may use it. It works with anything that serves `/v1/chat/completions`: OpenAI, Ollama, LM Studio, llama.cpp, vLLM, or a gateway in front of other providers. `examples/relay.mjs` is a dependency-free Node relay to start from (it checks a token, sets the model and streams the reply back).
+`completionsAssistant` builds the prompts, tool calls and image requests in the page and sends them in the OpenAI chat completions format, so your backend only relays them to a model server: it adds the model and API key, and checks the user may use it. It works with anything that serves `/v1/chat/completions`: OpenAI, Ollama, LM Studio, llama.cpp, vLLM, or a gateway in front of other providers. `examples/relay.mjs` is a dependency-free Node relay to start from (it checks a token, sets the model and streams the reply back). Its settings are environment variables: `PORT` (default 8790), `AI_BASE_URL` (default Ollama's `http://localhost:11434/v1`), `AI_MODEL` (set on every request; empty leaves the page's choice), `AI_API_KEY`, `AI_TOKEN` (a bearer token callers must send), `ALLOW_ORIGIN` (CORS, default `*`) and `AI_IMAGE_HOSTS`.
 
 Images go to the model as data when the page can read the file. An image on another site that doesn't allow pages to read it (no CORS) goes as its address, and many model servers (Ollama among them) only take data, so the example relay fetches it: http(s) only, images only, up to 8 MB, and never from private or local addresses unless listed in `AI_IMAGE_HOSTS` (it would otherwise let anyone reach machines inside your network). With in-browser models such an image can't be described at all; the editor says so.
 
@@ -477,6 +500,7 @@ Options:
 - **`body`**: extra fields for every request, e.g. `{ reasoning_effort: 'none' }` to keep a thinking model quick.
 - **`html`** (default true): rewrites send HTML and take HTML back. Set false for a small model.
 - **`chat`**, **`images`** (default true): turn off the chat (needs tool calls) or image descriptions (needs a model that takes images).
+- **`name`** (default "the server"): shown with suggestions ("Suggested by …").
 
 Replies may be streamed (`text/event-stream`) or plain JSON.
 
@@ -487,7 +511,11 @@ Replies may be streamed (`text/event-stream`) or plain JSON.
 
 ### Your own provider
 
-A provider is any object with `describeImage(req)`, `rewrite(req)` and/or `chat(req)`, and `html: true` when its rewrite takes HTML (see `AssistantProvider` in `src/types.ts`); the editor offers only what it has. `demo/ai.html` uses the in-browser models; `demo/ai-server.html` uses `completionsAssistant` with a local Ollama model.
+A provider is any object with `describeImage(req)`, `rewrite(req)` and/or `chat(req)`, and `html: true` when its rewrite takes HTML (see `AssistantProvider` in `src/types.ts`); the editor offers only what it has.
+
+`chat` gets the conversation as `{ role, content }` messages. An assistant message carries the actions it asked for in `calls`; the tool message after it reports them, all together in `content` and one per call, in order, in `results`. `context` is an outline of the page as it is now. The assistant bundle also exports the page tools it offers (`PAGE_TOOLS`), the outline (`pageContext(editor)`), and `runPageTool(editor, call)` and `callKey(call)`, for a provider that runs its own loop.
+
+Plugins can add to the image dialog with `editor.imageDialogHooks.push(hook)`: a hook gets `{ editor, src, alt, setDescribed }` each time the dialog opens and may return `{ field, start, close }` (the assistant's **Suggest a description** is one). `demo/ai.html` uses the in-browser models; `demo/ai-server.html` uses `completionsAssistant` with a local Ollama model.
 
 ## Media provider
 
@@ -519,7 +547,7 @@ interface Plugin { id: string; install(editor: Editor): void | (() => void) }
 
 Pass plugins in `options.plugins`, or call `editor.use(plugin)`. The function `install` returns, if any, runs on `destroy()`.
 
-The built-in features are plugins themselves (`BlockFusion.plugins`): `historyPlugin`, `formattingPlugin`, `insertPlugin`, `blocksPlugin`, `structurePlugin`, `sourcePlugin`, `checkerPlugin` and `helpPlugin`. A plugin can do the following:
+The built-in features are plugins themselves (`BlockFusion.plugins`): `historyPlugin`, `formattingPlugin`, `insertPlugin`, `dictationPlugin(options)`, `readAloudPlugin(options)`, `blocksPlugin(options)`, `structurePlugin`, `siteThemePlugin`, `sourcePlugin`, `checkerPlugin` and `helpPlugin`. The assistant is a plugin too (`assistantPlugin`, in the assistant bundle). A plugin can do the following:
 
 ```js
 const wordCount = {
@@ -652,7 +680,7 @@ siteTheme: false                                                 // no preview
 
 The "Contrast checker" toolbar button lists problems, each with a "Go to" button:
 
-- text below WCAG AA contrast (4.5:1, or 3:1 for large text), measured on the rendered canvas so theme CSS and row and column backgrounds count; text over a background image or gradient is flagged to check by eye. When the site has a dark mode the editor can preview, contrast is checked in both modes, and "Go to" switches the preview to the mode the problem shows in;
+- text below WCAG AA contrast (4.5:1, or 3:1 for large text), measured on the rendered canvas so theme CSS and row and column backgrounds count; text over a gradient is measured against its worst colour stop, and text over a background image is flagged to check by eye. When the site has a dark mode the editor can preview, contrast is checked in both modes, and "Go to" switches the preview to the mode the problem shows in;
 - images without alt text (or with placeholder alt text);
 - skipped or empty heading levels;
 - links without text.
@@ -685,7 +713,7 @@ It is a quick check, not a full accessibility audit. The image dialog asks for a
 
 ```sh
 npm install
-npm run build        # dist/blockfusion.js, .mjs, .css, -grid.css (esbuild)
+npm run build        # dist/blockfusion.js, .mjs, .css, -grid.css, -assistant.js and .mjs (esbuild)
 npm run watch        # rebuild on change
 npm test             # vitest + jsdom
 npm run typecheck    # tsc --noEmit
@@ -710,16 +738,21 @@ Everything loads locally:
 ```
 src/
   model/        neutral document model and pure operations
-  converters/   generic grid converter, the seven frameworks, class mapping, detection
+  converters/   generic grid converter, the eight frameworks, class mapping, detection
   history/      undo/redo with typing merge
   paste/        paste cleaning
   commands/     text and structure commands
-  plugins/      built-in plugins (formatting, insert, blocks, structure, source, checker, help, history)
+  plugins/      built-in plugins (formatting, insert, blocks, structure, source, checker, help, history,
+                dictation, read aloud, site theme) and the assistant's UI
+  assistant/    assistant bundle: completionsAssistant, page tools, formatting marks, sanitising
+  a11y/         contrast maths
   ui/           canvas, toolbar, menus, dialogs, live region, icons
   blocks/       built-in blocks
   styles/       editor chrome CSS
   editor.ts     the Editor class
   index.ts      public entry (global BlockFusion)
+extensions/ai/  blockfusion-ai: localAssistant, models in the browser
+examples/       relay.mjs, a backend for completionsAssistant
 ```
 
 ## Known limitations

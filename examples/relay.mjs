@@ -7,6 +7,12 @@
  *   AI_BASE_URL=http://localhost:11434/v1 AI_MODEL=inkling-2-mini:latest AI_TOKEN=secret \
  *     node examples/relay.mjs
  *
+ * Settings (environment): PORT (default 8790), AI_BASE_URL (default Ollama's
+ * http://localhost:11434/v1), AI_MODEL (set on every request; empty leaves
+ * the page's choice), AI_API_KEY, AI_TOKEN (a bearer token callers must
+ * send), ALLOW_ORIGIN (CORS, default *) and AI_IMAGE_HOSTS (below). Requests
+ * over 12 MB are refused.
+ *
  * Then in the page:
  *   BlockFusionAssistant.completionsAssistant({ url: 'http://localhost:8790/v1/chat/completions',
  *     headers: { Authorization: 'Bearer secret' }, body: { reasoning_effort: 'none' } })
