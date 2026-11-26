@@ -466,6 +466,114 @@
 
 /* --------------------------------------------------------------- menus */
 
+/* Two-step shortcuts: the letters on offer after the chord key */
+.bf-chord-hint {
+	position: fixed;
+	left: 50%;
+	bottom: 24px;
+	z-index: 1001;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px 14px;
+	max-width: min(640px, calc(100vw - 32px));
+	padding: 10px 14px;
+	border: 1px solid var(--bf-border-strong);
+	border-radius: 10px;
+	background: var(--bf-surface);
+	color: var(--bf-fg);
+	box-shadow: var(--bf-shadow);
+	font-size: 13px;
+	transform: translateX(-50%);
+}
+.bf-chord-hint kbd {
+	display: inline-block;
+	min-width: 1.6em;
+	padding: 1px 5px;
+	border: 1px solid var(--bf-border-strong);
+	border-radius: 4px;
+	background: var(--bf-surface-2);
+	font: inherit;
+	font-weight: 650;
+	text-align: center;
+}
+
+/* Block library: an insert popover by the button that opened it */
+.bf-blockpop {
+	position: fixed;
+	inset: auto;
+	z-index: 1000;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	width: min(760px, calc(100vw - 16px));
+	max-height: min(640px, calc(100vh - 16px));
+	margin: 0;
+	padding: 12px;
+	border: 1px solid var(--bf-border-strong);
+	border-radius: 10px;
+	background: var(--bf-surface);
+	color: var(--bf-fg);
+	box-shadow: var(--bf-shadow);
+	overflow: hidden;
+}
+.bf-blockpop[hidden] {
+	display: none;
+}
+.bf-blockpop-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+.bf-blockpop-title {
+	margin: 0;
+	font-size: 15px;
+	font-weight: 650;
+	color: var(--bf-fg);
+}
+.bf-blockpop-filters {
+	display: flex;
+	gap: 8px;
+}
+.bf-blockpop-filters .bf-input[type='search'] {
+	flex: 1;
+	min-width: 0;
+}
+.bf-blockpop-cat {
+	width: auto;
+	max-width: 45%;
+}
+.bf-blockpop-where,
+.bf-blockpop-count,
+.bf-blockpop-foot {
+	margin: 0;
+}
+.bf-blockpop-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+	align-content: start;
+	gap: 8px;
+	min-height: 0;
+	overflow: auto;
+	padding: 2px;
+}
+.bf-blockpop-grid > .bf-hint {
+	grid-column: 1 / -1;
+}
+/* Dimmed page behind it, as for the dialogs (Add row and so on) */
+.bf-blockpop::backdrop {
+	background: rgba(15, 23, 42, 0.5);
+}
+/* While a block is dragged, the page under the popover takes the drop */
+.bf-blockpop.bf-blockpop-dragging {
+	opacity: 0.2;
+	pointer-events: none;
+}
+.bf-blockpop.bf-blockpop-dragging::backdrop {
+	background: transparent;
+	pointer-events: none;
+}
+
 .bf-menu {
 	position: fixed;
 	z-index: 1000;

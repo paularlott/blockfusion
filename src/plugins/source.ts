@@ -9,7 +9,7 @@ export const sourcePlugin: Plugin = {
 			id: 'source',
 			label: 'HTML source',
 			icon: 'source',
-			shortcut: 'Mod+Alt+U',
+			chord: 'h',
 			run: async (ed) => {
 				const current = ed.getHTML();
 				const code = await codeDialog(ed, {

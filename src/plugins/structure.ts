@@ -67,7 +67,7 @@ export const structurePlugin: Plugin = {
 			id: 'addRow',
 			label: 'Add row',
 			icon: 'addRow',
-			shortcut: 'Mod+Alt+R',
+			chord: 'r',
 			run: (ed, arg) => addRowFlow(ed, (arg as InsertAt) ?? defaultWhere(ed)),
 		});
 		editor.registerCommand({

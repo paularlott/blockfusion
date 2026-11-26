@@ -20,6 +20,14 @@ export function describeShortcut(shortcut: string): { text: string; aria: string
 	return { text, aria };
 }
 
+/** How a command is reached from the keyboard, for tooltips and help: "⌘B" or "⌘; then B". */
+export function commandKeys(editor: Editor, cmd: { shortcut?: string; chord?: string }): string | null {
+	if (cmd.shortcut) return describeShortcut(cmd.shortcut).text;
+	const lead = editor.options.chordKey ?? 'Mod+;';
+	if (cmd.chord && lead) return `${describeShortcut(lead).text} then ${cmd.chord.toUpperCase()}`;
+	return null;
+}
+
 interface Entry {
 	item: ToolbarItem;
 	el: HTMLElement;
@@ -118,11 +126,12 @@ export class Toolbar {
 		const cmd = this.editor.commands.get(item.command);
 		const label = item.label ?? cmd?.label ?? item.id;
 		const shortcut = cmd?.shortcut ? describeShortcut(cmd.shortcut) : null;
+		const keys = cmd ? commandKeys(this.editor, cmd) : null;
 		const btn = h('button', {
 			type: 'button',
 			className: 'bf-tbtn',
 			'aria-label': label,
-			'data-tip': shortcut ? `${label} (${shortcut.text})` : label,
+			'data-tip': keys ? `${label} (${keys})` : label,
 			'aria-keyshortcuts': shortcut?.aria ?? null,
 			'aria-pressed': item.toggle ? 'false' : null,
 			'data-id': item.id,
@@ -214,8 +223,8 @@ export class Toolbar {
 			const label = item.label ?? cmd.label;
 			if (el.getAttribute('aria-label') !== label) {
 				el.setAttribute('aria-label', label);
-				const sc = cmd.shortcut ? describeShortcut(cmd.shortcut) : null;
-				el.setAttribute('data-tip', sc ? `${label} (${sc.text})` : label);
+				const keys = commandKeys(this.editor, cmd);
+				el.setAttribute('data-tip', keys ? `${label} (${keys})` : label);
 			}
 		}
 	}

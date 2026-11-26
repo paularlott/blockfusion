@@ -427,7 +427,7 @@ export const dictationPlugin = (opts: { dictation?: DictationProvider | boolean 
 			id: 'dictate',
 			label: 'Dictate',
 			icon: 'mic',
-			shortcut: 'Mod+Alt+V',
+			chord: 'd',
 			isActive: () => dictation.active,
 			run: () => (dictation.active ? dictation.stop() : dictation.start()),
 		});

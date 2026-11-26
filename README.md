@@ -115,6 +115,7 @@ Normal form posts therefore just work. On any other element, its current HTML be
 | `fontSizes` | five defaults | `[{ name, value }]` for the size menu. `value` is a CSS length. |
 | `colors` | ten defaults | `[{ name, value }]` for the text colour menu. The defaults all have at least 4.5:1 contrast on white. |
 | `theme` | `'auto'` | The editor's own light/dark. `'auto'` follows a `data-theme="light\|dark"` attribute on an ancestor, then `prefers-color-scheme`. `'light'` or `'dark'` forces one. It doesn't change how the page being edited looks (see `siteTheme`). |
+| `chordKey` | `'Mod+;'` | First key of the two-step shortcuts (Mod+; then B opens the block menu). `false` turns them off. |
 | `breakpoint` | `'md'` | Breakpoint that new layouts and resizes apply to (`sm`, `md`, `lg`, `xl` or `xxl`). Columns stack below it. |
 | `height` | `'auto'` | `'auto'` grows the canvas with its content. Any CSS length fixes it and scrolls. |
 
@@ -360,7 +361,7 @@ The 14 built-in blocks are:
 
 ## Dictation
 
-Dictation is off by default; turn it on with `dictation: true` (the browser's speech recognition) or a provider of your own (below). The **Dictate** button (microphone, Mod+Alt+V) then turns speech into text in the column being edited. Put the cursor in a text column, or select text to replace, and press it. Words appear in grey as they are heard and settle into the text; press Dictate again, or Escape, to stop. Spoken commands are listed below, and in the editor's keyboard help (Mod+/). Dictated text is ordinary typing: it can be undone, and the grey words never reach the saved content.
+Dictation is off by default; turn it on with `dictation: true` (the browser's speech recognition) or a provider of your own (below). The **Dictate** button (microphone, Mod+; then D) then turns speech into text in the column being edited. Put the cursor in a text column, or select text to replace, and press it. Words appear in grey as they are heard and settle into the text; press Dictate again, or Escape, to stop. Spoken commands are listed below, and in the editor's keyboard help (Mod+/). Dictated text is ordinary typing: it can be undone, and the grey words never reach the saved content.
 
 ### Spoken commands
 
@@ -402,7 +403,7 @@ BlockFusion.create(el, {
 
 ## Read aloud
 
-The **Read aloud** button (speaker, Mod+Alt+R) has the browser speak the selected text, or the whole column the cursor is in, highlighting each word as it's spoken (where the browser supports the CSS Custom Highlight API). Press it again, or Escape, to stop. Headings and paragraphs get a pause between them, and images are read by their alt text.
+The **Read aloud** button (speaker, Mod+; then S) has the browser speak the selected text, or the whole column the cursor is in, highlighting each word as it's spoken (where the browser supports the CSS Custom Highlight API). Press it again, or Escape, to stop. Headings and paragraphs get a pause between them, and images are read by their alt text.
 
 It's off by default:
 
@@ -430,7 +431,7 @@ Everything is in the **Assistant** menu (sparkle icon): **Chat…**, the one-sho
 
 - **Images:** the image dialog gets **Suggest a description**, which fills in the alt text for the author to check and edit; **Describe the selected image…** opens it for the selected image and starts straight away.
 - **One-shot actions** on the selection or the paragraph the cursor is in. The suggestion streams into a dialog, where the author can edit it; **Replace text** applies it as one undo step, keeping the paragraph's element and attributes. Only plain text goes to the assistant, so inline formatting within the replaced text isn't kept.
-- **Chat** (`assistantChat: true`): **Chat…** (or Mod+Alt+A) opens a side panel to talk to the assistant and have it change the page: "add a row with 3 columns", "in row 2 column 1 write a short welcome". The model sees an outline of the page (rows, columns, the start of their text, the cursor) and can add rows, write into columns and type at the cursor; there's no delete. Each change is an undo step, and the latest request's changes have an Undo button in the chat. A request stops when the model says it's done, repeats itself, or after six rounds.
+- **Chat** (`assistantChat: true`): **Chat…** (or Mod+; then A) opens a side panel to talk to the assistant and have it change the page: "add a row with 3 columns", "in row 2 column 1 write a short welcome". The model sees an outline of the page (rows, columns, the start of their text, the cursor) and can add rows, write into columns and type at the cursor; there's no delete. Each change is an undo step, and the latest request's changes have an Undo button in the chat. A request stops when the model says it's done, repeats itself, or after six rounds.
 
 ```js
 BlockFusion.create(el, {
@@ -651,9 +652,11 @@ It is a quick check, not a full accessibility audit. The image dialog asks for a
 | Align left / centre / right / justify | Mod+Shift+L / E / R / J |
 | Link | Mod+K |
 | Clear formatting | Mod+\ |
-| Add row, blocks panel, HTML source | Mod+Alt+R, Mod+Alt+B, Mod+Alt+U |
+| Block menu, add row, HTML source | Mod+; then B, R, H |
+| Read aloud, dictate, assistant chat | Mod+; then S, D, A |
+| Block menu (on an empty line; / then Escape types a slash) | / |
 
-**Mod** is ⌘ on macOS and Ctrl elsewhere.
+**Mod** is ⌘ on macOS and Ctrl elsewhere. **Mod+; then a letter** is a two-step shortcut: press ⌘; (Ctrl+;), let go, then the letter. The editor shows which letters are on offer, and Escape cancels. These replace ⌘⌥ combinations that browsers keep for themselves on macOS. Change the first key with the `chordKey` option (or turn them off with `false`); plugins give a command a letter with `chord`.
 
 ## Development
 

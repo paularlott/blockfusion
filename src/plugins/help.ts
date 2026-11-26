@@ -2,7 +2,7 @@
 import type { Plugin } from '../types';
 import { openDialog } from '../ui/dialog';
 import { h } from '../ui/dom';
-import { describeShortcut } from '../ui/toolbar';
+import { commandKeys } from '../ui/toolbar';
 import { DICTATION_COMMANDS } from './dictation';
 
 export const helpPlugin: Plugin = {
@@ -24,7 +24,8 @@ export const helpPlugin: Plugin = {
 					['Delete a row or column', 'Delete on its handle'],
 				];
 				for (const cmd of ed.commands.values()) {
-					if (cmd.shortcut) rows.push([cmd.label, describeShortcut(cmd.shortcut).text]);
+					const keys = commandKeys(ed, cmd);
+					if (keys) rows.push([cmd.label, keys]);
 				}
 				const table = h(
 					'table',

@@ -195,6 +195,12 @@ export interface Command {
 	icon?: string;
 	/** e.g. "Mod+B", "Mod+Shift+7", "Mod+Alt+1". Mod is Cmd on Mac, Ctrl elsewhere. */
 	shortcut?: string;
+	/**
+	 * A letter pressed after the chord key (the `chordKey` option, ⌘; or
+	 * Ctrl+; by default): "b" makes ⌘; then B run the command. Two short steps
+	 * keep clear of the ⌘⌥ combinations browsers claim on macOS.
+	 */
+	chord?: string;
 	/** Whether the command needs a caret in a rich column. */
 	text?: boolean;
 	run(editor: Editor, arg?: unknown): void | Promise<void>;
@@ -330,6 +336,11 @@ export interface EditorOptions {
 	fontSizes?: NamedValue[];
 	colors?: NamedValue[];
 	theme?: 'auto' | 'light' | 'dark';
+	/**
+	 * The first key of two-step shortcuts (⌘; then B opens the block menu).
+	 * Default "Mod+;". False turns them off.
+	 */
+	chordKey?: string | false;
 	plugins?: Plugin[];
 	/** Breakpoint new layouts and resizes apply to. Default 'md'. */
 	breakpoint?: Exclude<Breakpoint, 'base'>;

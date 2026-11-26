@@ -421,7 +421,7 @@ export const assistantPlugin: Plugin = {
 		);
 		if (chat) {
 			// A shortcut straight to the chat
-			editor.registerCommand({ id: 'assistantChat', label: 'Assistant chat', shortcut: 'Mod+Alt+A', run: (ed) => ed.togglePanel('assistant') });
+			editor.registerCommand({ id: 'assistantChat', label: 'Assistant chat', chord: 'a', run: (ed) => ed.togglePanel('assistant') });
 		}
 	},
 };

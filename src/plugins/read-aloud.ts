@@ -203,7 +203,7 @@ export const readAloudPlugin = (opts: { readAloud?: boolean | ReadAloudOptions }
 			id: 'readAloud',
 			label: 'Read aloud',
 			icon: 'speaker',
-			shortcut: 'Mod+Alt+R',
+			chord: 's',
 			isActive: () => reader.active,
 			run: () => (reader.active ? reader.stop() : reader.start()),
 		});

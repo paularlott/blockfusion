@@ -98,7 +98,7 @@ export function matchShortcut(shortcut: string, e: KeyboardEvent): boolean {
 	const mod = isMac ? e.metaKey : e.ctrlKey;
 	if (mod !== want.mod || e.shiftKey !== want.shift || e.altKey !== want.alt) return false;
 	if (isMac && e.ctrlKey && want.mod) return false;
-	const codes: Record<string, string> = { '[': 'BracketLeft', ']': 'BracketRight', '\\': 'Backslash', ',': 'Comma', '.': 'Period', '/': 'Slash' };
+	const codes: Record<string, string> = { '[': 'BracketLeft', ']': 'BracketRight', '\\': 'Backslash', ',': 'Comma', '.': 'Period', '/': 'Slash', ';': 'Semicolon' };
 	let code = codes[key];
 	if (!code) code = /^\d$/.test(key) ? 'Digit' + key : /^[a-z]$/i.test(key) ? 'Key' + key.toUpperCase() : key;
 	return e.code === code || (e.code === '' && e.key.toLowerCase() === key.toLowerCase());
@@ -871,8 +871,61 @@ export class Editor {
 		this.handleShortcut(e, true);
 	}
 
+	/* ------------------------------------------------ two-step shortcuts */
+
+	private chordTimer = 0;
+	private chordHint: HTMLElement | null = null;
+
+	/** Commands reachable as chord key then a letter, enabled ones only. */
+	private chordCommands(): Command[] {
+		return Array.from(this.commands.values()).filter((c) => c.chord && (c.isEnabled ? c.isEnabled(this) : true));
+	}
+
+	private endChord(): void {
+		clearTimeout(this.chordTimer);
+		this.chordTimer = 0;
+		this.chordHint?.remove();
+		this.chordHint = null;
+	}
+
+	private startChord(): void {
+		const cmds = this.chordCommands();
+		if (!cmds.length) return;
+		this.endChord();
+		const list = cmds.map((c) => `${c.chord!.toUpperCase()} ${c.label}`);
+		this.chordHint = h(
+			'div',
+			{ className: 'bf-chord-hint', 'aria-hidden': 'true' },
+			...cmds.map((c) => h('span', {}, h('kbd', {}, c.chord!.toUpperCase()), ' ', c.label)),
+		);
+		this.root.append(this.chordHint);
+		this.announce(`Shortcut: press ${list.join(', ')}. Escape cancels.`);
+		this.chordTimer = window.setTimeout(() => this.endChord(), 2500);
+	}
+
+	/** The key after the chord key: run its command, or cancel. */
+	private finishChord(e: KeyboardEvent): boolean {
+		if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return true;
+		e.preventDefault();
+		e.stopPropagation();
+		this.endChord();
+		if (e.key === 'Escape' || e.ctrlKey || e.metaKey || e.altKey) return true;
+		const cmd = this.chordCommands().find((c) => c.chord!.toLowerCase() === e.key.toLowerCase());
+		if (cmd) this.exec(cmd.id);
+		else this.announce('No shortcut for that key');
+		return true;
+	}
+
 	/** Global shortcuts: undo/redo, toolbar focus and every command shortcut. */
 	private handleShortcut(e: KeyboardEvent, chrome = false): boolean {
+		if (this.chordTimer) return this.finishChord(e);
+		const lead = this.options.chordKey ?? 'Mod+;';
+		if (lead && matchShortcut(lead, e) && this.chordCommands().length) {
+			e.preventDefault();
+			e.stopPropagation();
+			this.startChord();
+			return true;
+		}
 		const mod = isMac ? e.metaKey : e.ctrlKey;
 		let hit: (() => void) | null = null;
 		if (mod && !e.altKey && e.code === 'KeyZ') hit = e.shiftKey ? () => this.redo() : () => this.undo();

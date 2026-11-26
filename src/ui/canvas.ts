@@ -253,8 +253,11 @@ export class Canvas {
 		this.root.textContent = '';
 		const n = model.rows.length;
 		model.rows.forEach((row, i) => this.root.appendChild(this.renderRow(row, i, n, conv)));
-		if (!n) this.root.appendChild(hIn(d, 'p', { className: 'bf-empty' }, 'This page is empty. Add a row or a block to start.'));
-		this.root.appendChild(this.renderAddBar());
+		// An empty page shows how to start; once there is content, the toolbar adds
+		if (!n) {
+			this.root.appendChild(hIn(d, 'p', { className: 'bf-empty' }, 'This page is empty. Add a row or a block to start.'));
+			this.root.appendChild(this.renderAddBar());
+		}
 		this.savedRange = null;
 		requestAnimationFrame(() => this.fitHeight());
 	}
@@ -382,13 +385,19 @@ export class Canvas {
 			b.addEventListener('click', fn);
 			return b;
 		};
+		const mkAt = (label: string, ic: string, fn: (b: HTMLElement) => void) => {
+			const b = mk(label, ic, () => fn(b));
+			b.setAttribute('aria-haspopup', 'dialog');
+			b.setAttribute('aria-expanded', 'false');
+			return b;
+		};
 		return hIn(
 			d,
 			'div',
 			{ className: 'bf-addbar', role: 'group', 'aria-label': 'Add content at the end' },
 			mk('Add row', 'addRow', () => this.editor.exec('addRow', { at: 'end' })),
 			// Only when the page has blocks set up (the Blocks command says so)
-			this.editor.commands.get('blocks')?.isEnabled?.(this.editor) ? mk('Add block', 'blocks', () => this.editor.exec('blocks')) : null,
+			this.editor.commands.get('blocks')?.isEnabled?.(this.editor) ? mkAt('Add block', 'blocks', (b) => this.editor.exec('blocks', { anchor: b, where: { at: 'end' } })) : null,
 			mk('Add HTML', 'code', () => this.editor.exec('addRaw', { at: 'end' })),
 		);
 	}
