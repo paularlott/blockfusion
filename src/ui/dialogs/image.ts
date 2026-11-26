@@ -13,20 +13,23 @@ export async function imageDialog(editor: Editor, opts: { suggest?: boolean } = 
 	}
 	const existing = editor.selectedImage?.isConnected ? editor.selectedImage : null;
 
-	// A host file manager replaces the dialog for new images.
+	// A host file manager picks a new image first; the dialog then opens with
+	// it filled in, so the image gets alt text (or is marked decorative).
+	let picked: { src: string; alt?: string; width?: number; height?: number } | null = null;
 	if (!existing && editor.media?.pickImage) {
-		const res = await editor.media.pickImage({});
-		if (res) {
-			applyImage(editor, { src: res.src, alt: res.alt ?? '', width: res.width, height: res.height }, null);
-			if (!res.alt) editor.announce('Image inserted without alt text. Select it and use the image button to describe it.');
-		}
-		return;
+		picked = await editor.media.pickImage({});
+		if (!picked) return;
 	}
 
-	const src = input({ required: true, inputmode: 'url', value: existing?.getAttribute('src') ?? '' });
-	const alt = input({ value: existing?.getAttribute('alt') ?? '' });
+	const src = input({ required: true, inputmode: 'url', value: existing?.getAttribute('src') ?? picked?.src ?? '' });
+	const alt = input({ value: existing?.getAttribute('alt') ?? picked?.alt ?? '' });
 	const decorative = checkbox('Decorative image (no alt text)', existing ? existing.getAttribute('alt') === '' : false);
-	const width = input({ type: 'number', min: '1', inputmode: 'numeric', value: existing?.getAttribute('width') ?? '' });
+	const width = input({
+		type: 'number',
+		min: '1',
+		inputmode: 'numeric',
+		value: existing?.getAttribute('width') ?? (picked?.width ? String(picked.width) : ''),
+	});
 	const sync = () => {
 		alt.disabled = decorative.input.checked;
 		alt.required = !decorative.input.checked;
@@ -96,13 +99,18 @@ export async function imageDialog(editor: Editor, opts: { suggest?: boolean } = 
 		title: existing ? 'Edit image' : 'Add image',
 		body,
 		submitLabel: existing ? 'Save image' : 'Add image',
+		// A picked image only needs describing
+		initialFocus: picked ? alt : null,
 		onSubmit: () => {
+			const w = Number(width.value) || undefined;
 			applyImage(
 				editor,
 				{
 					src: src.value.trim(),
 					alt: decorative.input.checked ? '' : alt.value.trim(),
-					width: Number(width.value) || undefined,
+					width: w,
+					// The picker's height still fits while the picked image and width are kept
+					height: picked && src.value.trim() === picked.src && w === picked.width ? picked.height : undefined,
 				},
 				existing,
 			);

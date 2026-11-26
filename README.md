@@ -478,7 +478,7 @@ interface MediaProvider {
 }
 ```
 
-- **`pickImage`** replaces the image dialog for new images. It also adds a "Browse images…" button when an image is being edited.
+- **`pickImage`** opens first for a new image; the image dialog then opens with the picked image filled in, for its alt text (or to mark it decorative) and width. It also adds a "Browse images…" button to the dialog.
 - **`pickFile`** adds "Browse files…" to the link dialog.
 - **`pickImageLabel`** and **`pickFileLabel`** rename those buttons to suit your pickers (for example "Choose a page…").
 - **`upload`**:
