@@ -38,7 +38,7 @@ export async function linkDialog(editor: Editor): Promise<void> {
 							href.focus();
 						},
 					},
-					'Browse files…',
+					editor.media.pickFileLabel ?? 'Browse files…',
 				),
 			),
 		);

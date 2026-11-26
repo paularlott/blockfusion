@@ -637,6 +637,10 @@
 	gap: 4px;
 	min-width: 0;
 }
+/* A button on its own in a field (a picker) keeps its natural width */
+.bf-field > .bf-btn {
+	justify-self: start;
+}
 .bf-field-check {
 	display: flex;
 	align-items: center;

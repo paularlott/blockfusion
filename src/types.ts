@@ -23,6 +23,10 @@ export interface FileResult {
 export interface MediaProvider {
 	pickImage?(opts: { current?: ImageResult }): Promise<ImageResult | null>;
 	pickFile?(opts: { current?: string }): Promise<FileResult | null>;
+	/** The button that opens pickImage in the image dialog. Default "Browse images…". */
+	pickImageLabel?: string;
+	/** The button that opens pickFile in the link dialog. Default "Browse files…". */
+	pickFileLabel?: string;
 	/** Enables drag-and-drop and paste of image files. */
 	upload?(file: File): Promise<{ src: string; alt?: string }>;
 }

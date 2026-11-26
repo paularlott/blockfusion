@@ -49,7 +49,7 @@ export async function imageDialog(editor: Editor, opts: { suggest?: boolean } = 
 					}
 					src.focus();
 				},
-			}, 'Browse images…'),
+			}, editor.media.pickImageLabel ?? 'Browse images…'),
 		);
 	}
 	if (editor.media?.upload) {
