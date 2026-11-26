@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 72" width="400" height="72" role="img" aria-labelledby="t">
+	<title id="t">BlockFusion</title>
+	<defs>
+		<!-- One gradient across every block: the rows and columns fuse into one layout -->
+		<linearGradient id="fuse" x1="4" y1="4" x2="68" y2="68" gradientUnits="userSpaceOnUse">
+			<stop offset="0" stop-color="#67e8f9"/>
+			<stop offset="0.55" stop-color="#22d3ee"/>
+			<stop offset="1" stop-color="#3b82f6"/>
+		</linearGradient>
+	</defs>
+	<g fill="url(#fuse)">
+		<!-- row 1: wide + narrow column -->
+		<rect x="4" y="4" width="38" height="18" rx="4"/>
+		<rect x="46" y="4" width="22" height="18" rx="4"/>
+		<!-- row 2: narrow + wide column -->
+		<rect x="4" y="27" width="22" height="18" rx="4"/>
+		<rect x="30" y="27" width="38" height="18" rx="4"/>
+		<!-- row 3: one full-width block -->
+		<rect x="4" y="50" width="64" height="18" rx="4"/>
+	</g>
+	<text x="86" y="50" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="40" font-weight="700" letter-spacing="-0.5"><tspan fill="#f1f5f9">Block</tspan><tspan fill="#22d3ee">Fusion</tspan></text>
+</svg>

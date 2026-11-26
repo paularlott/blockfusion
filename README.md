@@ -1,5 +1,8 @@
 <p align="center">
-	<img src="docs/images/logo.svg" alt="BlockFusion" width="400">
+	<picture>
+		<source media="(prefers-color-scheme: dark)" srcset="docs/images/logo-dark.svg">
+		<img src="docs/images/logo.svg" alt="BlockFusion" width="400">
+	</picture>
 </p>
 
 <p align="center">An accessible WYSIWYG page editor built on rows, columns and blocks, that writes clean markup for your site's own CSS framework.</p>
