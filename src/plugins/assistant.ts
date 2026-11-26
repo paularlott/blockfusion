@@ -257,12 +257,12 @@ function chatPanel(editor: Editor, close?: () => void) {
 			);
 			container.append(intro, log, status, form);
 
-			/** Add to the conversation and bring it into view, in the log and in the panel around it. */
+			/** Add to the conversation and bring it into view in the log. */
 			const show = (el: HTMLElement) => {
 				log.append(el);
+				// Only the log scrolls: scrollIntoView would scroll the page behind too
 				const reveal = () => {
 					log.scrollTop = log.scrollHeight;
-					el.scrollIntoView({ block: 'nearest' });
 				};
 				reveal();
 				// Again once the layout settles (the status line changing below can move things)

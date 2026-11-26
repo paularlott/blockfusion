@@ -97,10 +97,14 @@ export class CentredPopover {
 		const vh = window.innerHeight;
 		const box = this.editor.root.getBoundingClientRect();
 		const bar = this.editor.root.querySelector('.bf-toolbar')?.getBoundingClientRect();
-		const top = Math.max(8, Math.min(bar && bar.bottom > 0 ? bar.bottom + 8 : box.top + 8, vh - 248));
+		// The editor out of view (the page scrolled away): the middle of the screen
+		const inView = box.bottom > 120 && box.top < vh - 120 && box.right > 0 && box.left < vw;
+		const top = !inView
+			? Math.max(8, vh * 0.12)
+			: Math.max(8, Math.min(bar && bar.bottom > 0 ? bar.bottom + 8 : box.top + 8, vh - 248));
 		this.el.style.maxHeight = `${Math.min(640, vh - top - 8)}px`;
 		const w = this.el.getBoundingClientRect().width;
-		const mid = Math.max(box.left, 0) + (Math.min(box.right, vw) - Math.max(box.left, 0)) / 2;
+		const mid = inView ? Math.max(box.left, 0) + (Math.min(box.right, vw) - Math.max(box.left, 0)) / 2 : vw / 2;
 		this.el.style.left = `${Math.max(8, Math.min(mid - w / 2, vw - w - 8))}px`;
 		this.el.style.top = `${top}px`;
 	}
