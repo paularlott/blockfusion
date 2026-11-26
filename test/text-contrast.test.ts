@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { composite, contrastRatio, formatRatio, isLargeText, parseRgb, requiredRatio } from '../src/a11y/contrast';
+import { backgroundsBehind, composite, contrastRatio, formatRatio, isLargeText, parseRgb, requiredRatio, worstContrast } from '../src/a11y/contrast';
 
 describe('text contrast maths', () => {
 	it('gives 21:1 for black on white and 1:1 for a colour on itself', () => {
@@ -27,5 +27,34 @@ describe('text contrast maths', () => {
 		expect(parseRgb('rgba(0, 0, 0, 0.5)')).toEqual([0, 0, 0, 0.5]);
 		expect(parseRgb('rgb(0 0 0 / 50%)')).toEqual([0, 0, 0, 0.5]);
 		expect(composite([0, 0, 0, 0.5], [255, 255, 255, 1])).toEqual([127.5, 127.5, 127.5, 1]);
+	});
+});
+
+describe('backgrounds behind text', () => {
+	const place = (html: string) => {
+		document.body.innerHTML = html;
+		return document.getElementById('t')!;
+	};
+	it('is the composited solid colour, white when nothing is set', () => {
+		expect(backgroundsBehind(place('<p id="t">x</p>'))).toEqual([[255, 255, 255, 1]]);
+		expect(backgroundsBehind(place('<div style="background-color: rgb(0, 0, 0)"><p id="t">x</p></div>'))).toEqual([[0, 0, 0, 1]]);
+	});
+	it('counts each colour stop of a gradient', () => {
+		const el = place('<div style="background-image: linear-gradient(rgb(255, 255, 255), rgb(0, 0, 0))"><p id="t">x</p></div>');
+		expect(backgroundsBehind(el)).toEqual([
+			[255, 255, 255, 1],
+			[0, 0, 0, 1],
+		]);
+	});
+	it('gives up on images', () => {
+		expect(backgroundsBehind(place('<div style="background-image: url(a.png)"><p id="t">x</p></div>'))).toBeNull();
+	});
+	it('measures against the worst background', () => {
+		const w = worstContrast([0, 0, 0, 1], [
+			[255, 255, 255, 1],
+			[118, 118, 118, 1],
+		]);
+		expect(w.bg).toEqual([118, 118, 118, 1]);
+		expect(w.ratio).toBeCloseTo(contrastRatio([0, 0, 0], [118, 118, 118]), 5);
 	});
 });

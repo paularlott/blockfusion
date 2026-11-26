@@ -95,7 +95,7 @@ function checkContrast(content: HTMLElement, add: (message: string, el?: Element
 		const quote = sample.length > 30 ? sample.slice(0, 30) + '…' : sample;
 		add(`Low contrast text${inMode} "${quote}": ${formatRatio(res.ratio)}, needs ${res.required}:1`, el);
 	}
-	if (unknown) add(`Text over a background image or gradient${inMode}: check its contrast by eye`, unknown);
+	if (unknown) add(`Text over a background image${inMode}: check its contrast by eye`, unknown);
 }
 
 const frame = (win: Window) => new Promise<void>((r) => win.requestAnimationFrame(() => r()));

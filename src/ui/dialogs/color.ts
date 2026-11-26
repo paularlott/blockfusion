@@ -2,7 +2,7 @@
  * Custom text colour: any CSS colour, typed or picked, with a live preview
  * on the background behind the selection and its contrast ratio.
  */
-import { backgroundBehind, contrastRatio, formatRatio, isLargeText, requiredRatio, toRGBA } from '../../a11y/contrast';
+import { backgroundsBehind, formatRatio, isLargeText, requiredRatio, toRGBA, worstContrast } from '../../a11y/contrast';
 import { applyInlineStyle, currentStyle } from '../../commands/text';
 import type { Editor } from '../../editor';
 import { input, openDialog } from '../dialog';
@@ -18,7 +18,9 @@ export async function textColorDialog(editor: Editor): Promise<void> {
 	const start = range.startContainer;
 	const anchor = (start.nodeType === 1 ? start : start.parentElement) as Element | null;
 	const win = editor.canvas.doc.defaultView!;
-	const bg = anchor ? backgroundBehind(anchor) : null;
+	// Every colour behind the selection (a gradient gives several)
+	const bgs = anchor ? backgroundsBehind(anchor) : null;
+	const gradient = !!bgs && bgs.length > 1;
 	const cs = anchor ? win.getComputedStyle(anchor) : null;
 	const large = cs ? isLargeText(parseFloat(cs.fontSize) || 16, parseInt(cs.fontWeight, 10) || 400) : false;
 	const need = requiredRatio(large);
@@ -28,7 +30,8 @@ export async function textColorDialog(editor: Editor): Promise<void> {
 	const picker = h('input', { type: 'color', className: 'bf-color', 'aria-label': 'Pick text colour', value: toHexColor(initial) ?? '#000000' }) as HTMLInputElement;
 
 	const sample = h('p', { className: 'bf-color-sample', 'aria-hidden': 'true' }, 'Sample text');
-	if (bg) sample.style.backgroundColor = `rgb(${bg[0]}, ${bg[1]}, ${bg[2]})`;
+	const showOn = (bg: number[]) => (sample.style.backgroundColor = `rgb(${bg[0]}, ${bg[1]}, ${bg[2]})`);
+	if (bgs) showOn(bgs[0]);
 	if (cs) {
 		sample.style.fontSize = cs.fontSize;
 		sample.style.fontWeight = cs.fontWeight;
@@ -46,15 +49,17 @@ export async function textColorDialog(editor: Editor): Promise<void> {
 			status.dataset.state = v ? 'bad' : '';
 			return;
 		}
-		if (!bg) {
-			status.textContent = 'The background here is an image or gradient, so contrast can’t be measured. Check it by eye.';
+		if (!bgs) {
+			status.textContent = 'The background here is an image, so contrast can’t be measured. Check it by eye.';
 			status.dataset.state = 'warn';
 			return;
 		}
-		const fg = [c[0] * c[3] + bg[0] * (1 - c[3]), c[1] * c[3] + bg[1] * (1 - c[3]), c[2] * c[3] + bg[2] * (1 - c[3])] as [number, number, number];
-		const ratio = contrastRatio(fg, bg);
+		// The sample shows the colour on the part of the background where it is hardest to read
+		const { ratio, bg } = worstContrast(c, bgs);
+		showOn(bg);
 		const ok = ratio >= need;
-		status.textContent = `Contrast ${formatRatio(ratio)} with the background: ${ok ? 'passes' : 'too low'} (${large ? 'large' : 'normal'} text needs ${need}:1).`;
+		const where = gradient ? 'the background gradient, at its lowest' : 'the background';
+		status.textContent = `Contrast ${formatRatio(ratio)} with ${where}: ${ok ? 'passes' : 'too low'} (${large ? 'large' : 'normal'} text needs ${need}:1).`;
 		status.dataset.state = ok ? 'ok' : 'bad';
 	};
 	picker.addEventListener('input', () => {

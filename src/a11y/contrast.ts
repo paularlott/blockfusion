@@ -82,24 +82,65 @@ export function toRGBA(value: string): RGBA | null {
 
 const WHITE: RGBA = [255, 255, 255, 1];
 
+/** Colour functions as computed styles write them inside a gradient. */
+const COLOUR_FN = /\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\([^()]*\)/gi;
+
 /**
- * The opaque colour behind `el`: its own background and each ancestor's,
- * composited down to the page (white when nothing is set). Null when a
- * background image or gradient is in the way, as the colour can't be known.
+ * Every opaque colour that can be behind `el`: its own background and each
+ * ancestor's, composited down to the page (white when nothing is set). A
+ * gradient counts as each of its colour stops, so contrast can be measured
+ * against the worst of them. Null when an image (url()) is in the way, as its
+ * colours can't be known.
  */
-export function backgroundBehind(el: Element): RGBA | null {
-	const layers: RGBA[] = [];
+export function backgroundsBehind(el: Element): RGBA[] | null {
+	// Layers from the top down, each a list of the colours it may be
+	const layers: RGBA[][] = [];
 	for (let n: Element | null = el; n; n = n.parentElement) {
 		const cs = n.ownerDocument.defaultView!.getComputedStyle(n);
-		if (cs.backgroundImage && cs.backgroundImage !== 'none') return null;
+		const image = cs.backgroundImage;
+		let covered = false;
+		if (image && image !== 'none') {
+			if (/url\(/i.test(image)) return null;
+			const stops = (image.match(COLOUR_FN) ?? []).map(toRGBA);
+			if (!stops.length || stops.some((c) => !c)) return null;
+			const visible = (stops as RGBA[]).filter((c) => c[3] > 0);
+			if (visible.length) layers.push(visible);
+			covered = stops.every((c) => c![3] >= 1);
+		}
+		if (covered) break;
 		const c = toRGBA(cs.backgroundColor);
 		if (!c) return null;
-		if (c[3] > 0) layers.push(c);
+		if (c[3] > 0) layers.push([c]);
 		if (c[3] >= 1) break;
 	}
-	let out = WHITE;
-	for (let i = layers.length - 1; i >= 0; i--) out = composite(layers[i], out);
+	let out: RGBA[] = [WHITE];
+	for (let i = layers.length - 1; i >= 0; i--) {
+		const next: RGBA[] = [];
+		for (const top of layers[i]) for (const below of out) next.push(composite(top, below));
+		// Keep the set small: drop repeats, and stop growing past 64 colours
+		const seen = new Set<string>();
+		out = next.filter((c) => {
+			const k = c.slice(0, 3).map(Math.round).join(',');
+			return seen.has(k) ? false : (seen.add(k), true);
+		}).slice(0, 64);
+	}
 	return out;
+}
+
+/** The single opaque colour behind `el`, or null for a gradient or image. */
+export function backgroundBehind(el: Element): RGBA | null {
+	const all = backgroundsBehind(el);
+	return all && all.length === 1 ? all[0] : null;
+}
+
+/** The lowest contrast of `fg` (which may be translucent) over any of `bgs`, and that background. */
+export function worstContrast(fg: RGBA, bgs: RGBA[]): { ratio: number; bg: RGBA } {
+	let worst = { ratio: Infinity, bg: bgs[0] };
+	for (const bg of bgs) {
+		const ratio = contrastRatio(composite(fg, bg), bg);
+		if (ratio < worst.ratio) worst = { ratio, bg };
+	}
+	return worst;
 }
 
 export interface ContrastResult {
@@ -108,15 +149,17 @@ export interface ContrastResult {
 	large: boolean;
 }
 
-/** Contrast of the text in `el` against what is behind it, or null if unknown. */
+/**
+ * Contrast of the text in `el` against what is behind it (the worst part of a
+ * gradient), or null if unknown.
+ */
 export function textContrast(el: Element): ContrastResult | null {
 	const cs = el.ownerDocument.defaultView!.getComputedStyle(el);
-	const bg = backgroundBehind(el);
+	const bgs = backgroundsBehind(el);
 	const fg = toRGBA(cs.color);
-	if (!bg || !fg) return null;
+	if (!bgs || !fg) return null;
 	const large = isLargeText(parseFloat(cs.fontSize) || 16, parseInt(cs.fontWeight, 10) || 400);
 	const opacity = parseFloat(cs.opacity);
-	let colour = composite(fg, bg);
-	if (opacity < 1) colour = composite([colour[0], colour[1], colour[2], opacity], bg);
-	return { ratio: contrastRatio(colour, bg), required: requiredRatio(large), large };
+	const fgSeen: RGBA = [fg[0], fg[1], fg[2], fg[3] * (opacity < 1 ? opacity : 1)];
+	return { ratio: worstContrast(fgSeen, bgs).ratio, required: requiredRatio(large), large };
 }
