@@ -71,6 +71,8 @@ export interface AssistantMessage {
 	content: string;
 	/** On assistant messages: the actions it asked for. */
 	calls?: AssistantToolCall[];
+	/** On tool messages: each action's result, in the order of the calls before it (`content` has them all). */
+	results?: string[];
 }
 
 /**

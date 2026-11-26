@@ -444,7 +444,7 @@ function chatPanel(editor: Editor, close?: () => void) {
 							reports.push(r.report);
 							bubble('note', r.report);
 						}
-						history.push({ role: 'tool', content: reports.join(' ') });
+						history.push({ role: 'tool', content: reports.join(' '), results: reports });
 						status.textContent = 'Working…';
 					}
 				} catch (err) {

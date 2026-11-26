@@ -48,7 +48,7 @@ async function chatTools(job) {
 	const messages = [
 		{
 			role: 'system',
-			content: `You are an assistant inside a web page editor, working in the language "${job.lang}". Change the page by calling the tools; after they run you'll be told what happened. If no change is needed, answer in plain text.\n\n${job.context}`,
+			content: `You are an assistant inside a web page editor, working in the language "${job.lang}". Change the page by calling the tools; after they run you'll be told what happened and shown the page as it is then. When the request is done, say briefly what you changed. If no change is needed, answer in plain text.`,
 		},
 	];
 	let n = 0;
@@ -58,11 +58,17 @@ async function chatTools(job) {
 			pending = m.calls.map((c) => ({ id: `call_${++n}`, type: 'function', function: { name: c.name, arguments: JSON.stringify(c.arguments ?? {}) } }));
 			messages.push({ role: 'assistant', content: m.content || '', tool_calls: pending });
 		} else if (m.role === 'tool') {
-			// The editor reports a round's results together; answer each call with them
-			for (const c of pending) messages.push({ role: 'tool', tool_call_id: c.id, content: m.content });
+			// Each call gets its own result (a model told every result for every call
+			// thinks the work was done several times)
+			pending.forEach((c, i) => messages.push({ role: 'tool', tool_call_id: c.id, content: m.results?.[i] ?? (i ? 'Done.' : m.content) }));
 			pending = [];
 		} else messages.push({ role: m.role, content: m.content });
 	}
+	// The page as it is now goes last, after any results, so the model doesn't
+	// take its own changes for ones that were there before the request
+	const last = messages[messages.length - 1];
+	if (last.role === 'tool') last.content = `${last.content}\n\nThe page now. ${job.context}`;
+	else messages[0].content += `\n\n${job.context}`;
 	const res = await fetch(`${BASE}/chat/completions`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json', ...(KEY ? { Authorization: `Bearer ${KEY}` } : {}) },
@@ -177,4 +183,10 @@ createServer(async (req, res) => {
 		if (!res.headersSent) res.writeHead(500, { 'Content-Type': 'application/json' });
 		res.end(JSON.stringify({ error: String(err.message ?? err) }));
 	}
-}).listen(PORT, () => console.log(`BlockFusion assistant example on http://localhost:${PORT}/assistant -> ${BASE} (${MODEL}, ${VISION})`));
+})
+	.on('error', (err) => {
+		if (err.code !== 'EADDRINUSE') throw err;
+		console.error(`Port ${PORT} is already in use (another copy of this server?). Stop it, or pick another port: PORT=8788 node examples/assistant-server/server.mjs`);
+		process.exit(1);
+	})
+	.listen(PORT, () => console.log(`BlockFusion assistant example on http://localhost:${PORT}/assistant -> ${BASE} (${MODEL}, ${VISION})`));

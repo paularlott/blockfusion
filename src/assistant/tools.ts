@@ -3,6 +3,7 @@
  * Actions go through the editor's normal commands, so each is undoable and
  * announced. There's no delete action: a misunderstanding can't remove work.
  */
+import { rebuild } from './marked';
 import type { Editor } from '../editor';
 import { createRow, findCol, insertRows, setColHtml } from '../model/doc';
 import type { AssistantTool, AssistantToolCall } from '../types';
@@ -29,7 +30,7 @@ export const PAGE_TOOLS: AssistantTool[] = [
 			properties: {
 				row: { type: 'integer' },
 				column: { type: 'integer' },
-				text: { type: 'string', description: 'The new content as plain text; blank lines separate paragraphs; a first line starting "# " is a heading' },
+				text: { type: 'string', description: 'The new content as text; blank lines separate paragraphs; a first line starting "# " is a heading; **bold**, *italic* and `code` are kept as formatting' },
 			},
 			required: ['row', 'column', 'text'],
 		},
@@ -72,11 +73,14 @@ export function pageContext(editor: Editor): string {
 	return lines.join('\n');
 }
 
-function escapeHtml(s: string): string {
-	return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+/** Text with **bold**, *italic* and `code` marks as safe inline HTML (no links: there's no original to rebuild). */
+function inline(text: string): string {
+	const box = document.createElement('div');
+	box.append(rebuild(text, { refs: [], spans: [] }, document).frag);
+	return box.innerHTML;
 }
 
-/** Plain text to simple content: paragraphs, a "# " heading. */
+/** Plain text to simple content: paragraphs, a "# " heading, and **bold**, *italic* and `code` marks. */
 export function textToContent(text: string): string {
 	return text
 		.trim()
@@ -85,8 +89,8 @@ export function textToContent(text: string): string {
 		.filter(Boolean)
 		.map((p) => {
 			const hm = /^(#{1,3})\s+(.*)$/s.exec(p);
-			if (hm) return `<h${hm[1].length + 1}>${escapeHtml(hm[2].trim())}</h${hm[1].length + 1}>`;
-			return `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`;
+			if (hm) return `<h${hm[1].length + 1}>${inline(hm[2].trim())}</h${hm[1].length + 1}>`;
+			return `<p>${inline(p)}</p>`;
 		})
 		.join('');
 }

@@ -43,21 +43,36 @@
 			<pre><code>AI_MODEL=inkling-2-mini:latest AI_VISION_MODEL=inkling-2-mini:latest node examples/assistant-server/server.mjs</code></pre>
 			<ul>
 				<li>Serve this folder over http://localhost (<code>npm run demo</code>) and open this page. Add <code>?server=URL</code> to use another assistant server.</li>
+				<li>Or open it with <code>?relay</code>: the AI extension's <code>completionsAssistant</code> builds the prompts in the page and sends standard chat completions requests, so the backend only relays them, adding the model and checking a token. Start the relay with:</li>
 			</ul>
+			<pre><code>AI_MODEL=inkling-2-mini:latest AI_TOKEN=demo-token node extensions/ai/examples/relay.mjs</code></pre>
 		</section>
 	</main>
 	<script src="../dist/blockfusion.js"></script>
 	<!-- The assistant is its own file; it registers itself with the editor -->
 	<script src="../dist/blockfusion-assistant.js"></script>
-	<script>
-		const server = new URLSearchParams(location.search).get('server') || 'http://localhost:8787/assistant';
+	<script type="module">
+		import { completionsAssistant } from '../extensions/ai/dist/blockfusion-ai.mjs';
+		const params = new URLSearchParams(location.search);
+		// ?relay: the prompts are built here and a relay passes them to the model server
+		// (extensions/ai/examples/relay.mjs); otherwise the example job server builds them
+		const relay = params.has('relay');
+		const assistant = relay
+			? completionsAssistant({
+					url: params.get('relay') || 'http://localhost:8790/v1/chat/completions',
+					// A real page would fetch a fresh token here (a function is called before each request)
+					headers: () => ({ Authorization: 'Bearer demo-token' }),
+					body: { reasoning_effort: 'none' },
+					name: 'the local Ollama relay',
+				})
+			: BlockFusionAssistant.httpAssistant({ url: params.get('server') || 'http://localhost:8787/assistant', name: 'the local Ollama server', chat: true, html: true });
 		window.editor = BlockFusion.create(document.getElementById('content'), {
 			converter: 'fusioncss',
 			stylesheets: ['vendor/fusioncss.min.css', 'canvas.css'],
 			bodyClass: 'demo-pad',
 			defaultBlocks: false,
 			// A capable server-side model: HTML in and out, chat with tools
-			assistant: BlockFusionAssistant.httpAssistant({ url: server, name: 'the local Ollama server', chat: true, html: true }),
+			assistant,
 			assistantChat: true,
 			assistantActions: [
 				{ id: 'fix', label: 'Fix spelling and grammar', prompt: "Rewrite the text with every spelling, grammar and punctuation mistake corrected, including verb forms (we has → we have) and confused words (then/than, to/too, their/they're). Keep the wording otherwise the same." },

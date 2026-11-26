@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fromMarked, rebuild, refsIn, toMarked } from '../src/assistant/marked';
+import { textToContent } from '../src/assistant/tools';
 
 const el = (html: string) => {
 	const d = document.createElement('div');
@@ -94,5 +95,13 @@ describe('formatting a model dropped', () => {
 		const { frag, lost } = rebuild(m.text, m, document);
 		expect(html(frag)).toBe(original);
 		expect(lost).toEqual([]);
+	});
+});
+
+describe('text the chat writes', () => {
+	it('keeps bold, italic and code, and escapes everything else', () => {
+		expect(textToContent('# Hours\n\nOpen **Saturday**, *10 to 4*.\nCall `0123` <b>now</b>')).toBe(
+			'<h2>Hours</h2><p>Open <strong>Saturday</strong>, <em>10 to 4</em>.<br>Call <code>0123</code> &lt;b&gt;now&lt;/b&gt;</p>',
+		);
 	});
 });
