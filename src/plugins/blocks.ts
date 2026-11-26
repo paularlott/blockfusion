@@ -14,6 +14,7 @@ import { h, nextId } from '../ui/dom';
 import type { InsertAt } from '../commands/structure';
 import { findRow } from '../model/doc';
 import { layoutPreview } from '../ui/dialogs/layout';
+import { CentredPopover } from '../ui/popover';
 
 /** A schematic preview of a block: one bar per row, split by span. */
 function blockPreview(editor: Editor, block: Block): HTMLElement {
@@ -52,7 +53,7 @@ function insertIndex(editor: Editor, where: InsertAt): number {
 }
 
 class BlockPopover {
-	readonly el: HTMLElement;
+	readonly pop: CentredPopover;
 	private search: HTMLInputElement;
 	private cat: HTMLSelectElement;
 	private count: HTMLElement;
@@ -60,35 +61,40 @@ class BlockPopover {
 	private grid: HTMLElement;
 	private where: InsertAt = { at: 'end' };
 	private anchor: Element | null = null;
-	private returnTo: HTMLElement | null = null;
 	private dragging = false;
 	/** Opened by typing "/": closing without a block types the slash after all. */
 	private bySlash = false;
 	private picked = false;
-	isOpen = false;
 
 	constructor(private editor: Editor) {
-		const titleId = nextId('bf-bpop');
+		this.pop = new CentredPopover(editor, {
+			title: 'Add a block',
+			className: 'bf-blockpop',
+			busy: () => this.dragging,
+			onClose: (refocus) => {
+				this.anchor?.setAttribute('aria-expanded', 'false');
+				// "/" then Escape (or the close button) types a slash, so an empty
+				// line can still start with one
+				if (refocus && this.bySlash && !this.picked && !this.dragging) {
+					editor.canvas.restoreSelection();
+					editor.canvas.doc?.execCommand('insertText', false, '/');
+				}
+				this.bySlash = false;
+				editor.toolbar.update();
+			},
+		});
 		this.search = h('input', { type: 'search', className: 'bf-input', autocomplete: 'off', placeholder: 'Search blocks', 'aria-label': 'Search blocks' }) as HTMLInputElement;
 		this.cat = h('select', { className: 'bf-input bf-blockpop-cat', 'aria-label': 'Category' }) as HTMLSelectElement;
 		this.count = h('p', { className: 'bf-hint bf-blockpop-count', role: 'status', 'aria-live': 'polite' });
 		this.whereLine = h('p', { className: 'bf-hint bf-blockpop-where' });
 		this.grid = h('div', { className: 'bf-blockpop-grid', role: 'group', 'aria-label': 'Blocks' });
-		const close = h('button', { type: 'button', className: 'bf-btn bf-btn-icon', 'aria-label': 'Close blocks' }, '×');
-		close.addEventListener('click', () => this.close(true));
-		this.el = h(
-			'div',
-			{ className: 'bf-blockpop', role: 'dialog', 'aria-labelledby': titleId, hidden: true },
-			h('div', { className: 'bf-blockpop-head' }, h('h2', { className: 'bf-blockpop-title', id: titleId }, 'Add a block'), close),
+		this.pop.body.append(
 			this.whereLine,
 			h('div', { className: 'bf-blockpop-filters' }, this.search, this.cat),
 			this.count,
 			this.grid,
 			h('p', { className: 'bf-hint bf-blockpop-foot' }, 'Enter adds a block here. Or drag one anywhere on the page.'),
 		);
-		// The top layer (popover API) keeps it above the editor and clear of any
-		// overflow; it's positioned against the viewport either way
-		if ('popover' in this.el) this.el.setAttribute('popover', 'manual');
 
 		this.search.addEventListener('input', () => this.render());
 		this.cat.addEventListener('change', () => this.render());
@@ -100,17 +106,14 @@ class BlockPopover {
 			}
 		});
 		this.grid.addEventListener('keydown', (e) => this.onGridKey(e));
-		this.el.addEventListener('keydown', (e) => {
-			if (e.key === 'Escape' && !e.defaultPrevented) {
-				e.preventDefault();
-				e.stopPropagation();
-				this.close(true);
-			}
-		});
-		this.el.addEventListener('focusout', (e) => {
-			const to = e.relatedTarget as Node | null;
-			if (!this.dragging && to && !this.el.contains(to)) this.close(false);
-		});
+	}
+
+	get isOpen(): boolean {
+		return this.pop.isOpen;
+	}
+
+	close(refocus: boolean): void {
+		this.pop.close(refocus);
 	}
 
 	private buttons(): HTMLButtonElement[] {
@@ -175,7 +178,7 @@ class BlockPopover {
 				if (!ed.insertRowsAt(rows, at, `Insert block ${b.name}`)) return;
 				// The button that opened it can go with the redraw (Add block on an
 				// empty page): carry on in the new block instead
-				if (!this.returnTo?.isConnected) {
+				if (!this.pop.opener?.isConnected) {
 					const col = ed.doc.rows[at]?.kind !== 'raw' ? ed.doc.rows[at]?.cols[0] : undefined;
 					if (col) ed.canvas.content(col.id)?.focus();
 				}
@@ -189,7 +192,7 @@ class BlockPopover {
 				btn.classList.add('bf-dragging');
 				// Let the page under the popover take the drop
 				this.dragging = true;
-				requestAnimationFrame(() => this.el.classList.add('bf-blockpop-dragging'));
+				requestAnimationFrame(() => this.pop.el.classList.add('bf-pop-dragging'));
 			});
 			btn.addEventListener('dragend', (e) => {
 				ed.draggedBlock = null;
@@ -200,7 +203,7 @@ class BlockPopover {
 				// the same block. A drop on the page adds the block, and closes it.
 				const dropped = e.dataTransfer?.dropEffect !== 'none' || ed.doc.rows.length !== rowsAtStart;
 				if (dropped) return this.close(false);
-				this.el.classList.remove('bf-blockpop-dragging');
+				this.pop.el.classList.remove('bf-pop-dragging');
 				btn.focus();
 			});
 			this.grid.append(btn);
@@ -218,80 +221,21 @@ class BlockPopover {
 		this.anchor = args.anchor ?? ed.root.querySelector('.bf-toolbar [data-id="blocks"]');
 		// Opened by typing "/": go back to the text afterwards
 		const typing = (ed.canvas.doc?.activeElement as HTMLElement | null)?.closest?.('[data-bf-content]') as HTMLElement | null;
-		this.returnTo = (args.where && !args.anchor && typing) || ((this.anchor as HTMLElement | null) ?? null);
+		const returnTo = (args.where && !args.anchor && typing) || ((this.anchor as HTMLElement | null) ?? null);
 		this.search.value = '';
 		const i = this.where.at === 'end' ? -1 : ed.doc.rows.findIndex((r) => r.id === (this.where as { rowId: string }).rowId);
 		this.whereLine.textContent =
 			i < 0 ? 'Adds at the end of the page.' : `Adds ${this.where.at === 'before' ? 'before' : 'after'} row ${i + 1} of ${ed.doc.rows.length}.`;
-		this.el.classList.remove('bf-blockpop-dragging');
-		if (!this.el.isConnected) ed.root.append(this.el);
+		this.pop.el.classList.remove('bf-pop-dragging');
 		this.render();
-		this.el.hidden = false;
-		if (this.el.hasAttribute('popover')) this.el.showPopover();
-		this.isOpen = true;
-		this.place();
+		this.pop.open(returnTo);
 		this.search.focus();
-		document.addEventListener('pointerdown', this.onOutside, true);
-		ed.canvas.doc?.addEventListener('pointerdown', this.onOutside, true);
-		window.addEventListener('resize', this.onResize);
-		window.addEventListener('scroll', this.onResize, true);
 		ed.toolbar.update();
 		this.anchor?.setAttribute('aria-expanded', 'true');
 	}
 
-	/**
-	 * Centred over the editor, just below its toolbar (or the top of the
-	 * screen once the toolbar has scrolled away), so it always opens in the
-	 * same place whichever button opened it.
-	 */
-	private place(): void {
-		const vw = window.innerWidth;
-		const vh = window.innerHeight;
-		const box = this.editor.root.getBoundingClientRect();
-		const bar = this.editor.root.querySelector('.bf-toolbar')?.getBoundingClientRect();
-		const top = Math.max(8, Math.min(bar && bar.bottom > 0 ? bar.bottom + 8 : box.top + 8, vh - 248));
-		this.el.style.maxHeight = `${Math.min(640, vh - top - 8)}px`;
-		const w = this.el.getBoundingClientRect().width;
-		const mid = Math.max(box.left, 0) + (Math.min(box.right, vw) - Math.max(box.left, 0)) / 2;
-		this.el.style.left = `${Math.max(8, Math.min(mid - w / 2, vw - w - 8))}px`;
-		this.el.style.top = `${top}px`;
-	}
-
-	private onOutside = (e: Event) => {
-		if (this.dragging) return;
-		const t = e.target as Node;
-		// A click on the dimmed backdrop targets the popover itself, outside its box
-		if (t === this.el && e instanceof PointerEvent) {
-			const r = this.el.getBoundingClientRect();
-			if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) return;
-			return this.close(false);
-		}
-		if (this.el.contains(t) || (this.anchor && this.anchor.contains(t))) return;
-		this.close(false);
-	};
-	private onResize = () => {
-		if (this.isOpen && !this.dragging) this.place();
-	};
-
-	close(refocus: boolean): void {
-		if (!this.isOpen) return;
-		this.isOpen = false;
-		if (this.el.hasAttribute('popover') && this.el.matches(':popover-open')) this.el.hidePopover();
-		this.el.hidden = true;
-		document.removeEventListener('pointerdown', this.onOutside, true);
-		this.editor.canvas.doc?.removeEventListener('pointerdown', this.onOutside, true);
-		window.removeEventListener('resize', this.onResize);
-		window.removeEventListener('scroll', this.onResize, true);
-		this.anchor?.setAttribute('aria-expanded', 'false');
-		if (refocus && this.returnTo?.isConnected) this.returnTo.focus({ preventScroll: true });
-		// "/" then Escape (or the close button) types a slash, so an empty line
-		// can still start with one
-		if (refocus && this.bySlash && !this.picked && !this.dragging) {
-			this.editor.canvas.restoreSelection();
-			this.editor.canvas.doc?.execCommand('insertText', false, '/');
-		}
-		this.bySlash = false;
-		this.editor.toolbar.update();
+	get el(): HTMLElement {
+		return this.pop.el;
 	}
 }
 

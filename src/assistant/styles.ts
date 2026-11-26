@@ -62,9 +62,30 @@ const CSS = `
 	color: var(--bf-fg-muted);
 	font-size: 13px;
 }
+/* The chat popover: the conversation takes the room, the form stays in view */
+.bf-chatpop {
+	width: min(640px, calc(100vw - 16px));
+}
+.bf-chatpop .bf-chat-log {
+	flex: 1 1 auto;
+	max-height: none;
+	min-height: 160px;
+}
 .bf-chat-form {
 	display: grid;
 	gap: 6px;
+}
+.bf-chat-buttons {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+.bf-chat-actions {
+	display: flex;
+	gap: 8px;
+	margin-inline-start: auto;
 }
 .bf-chat-input {
 	resize: vertical;

@@ -92,6 +92,18 @@ export class Toolbar {
 				this.el.append(h('div', { className: 'bf-tsep', role: 'separator', 'aria-orientation': 'vertical' }), group);
 				continue;
 			}
+			if (item.type === 'split') {
+				// Two toolbar stops in one frame: the command, then its menu
+				const main = { type: 'button', id: item.id, command: item.command, label: item.label, icon: item.icon } as const;
+				const more = { type: 'menu', id: item.id + '-menu', label: item.menuLabel ?? `More ${item.label.toLowerCase()} options`, items: item.items } as const;
+				const a = this.buildItem(main);
+				const b = this.buildItem(more);
+				b.setAttribute('aria-label', more.label);
+				b.classList.add('bf-tbtn-split-more');
+				group.append(h('span', { className: 'bf-tsplit' }, a, b));
+				this.entries.push({ item: main, el: a }, { item: more, el: b });
+				continue;
+			}
 			const el = this.buildItem(item);
 			group.append(el);
 			this.entries.push({ item, el });
@@ -100,7 +112,7 @@ export class Toolbar {
 		this.update();
 	}
 
-	private buildItem(item: Exclude<ToolbarItem, { type: 'separator' }>): HTMLElement {
+	private buildItem(item: Exclude<ToolbarItem, { type: 'separator' | 'split' }>): HTMLElement {
 		if (item.type === 'menu') {
 			const btn = h('button', {
 				type: 'button',

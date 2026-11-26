@@ -77,7 +77,7 @@ Normal form posts therefore just work. On any other element, its current HTML be
   - Add, remove, move, resize, duplicate and delete rows and columns.
   - Clicking anywhere in a column, including the space below its text, puts the cursor at the end of its text. An empty column is outlined and shows a "Type here…" prompt.
   - Row and column settings: class, id, element, background, inline style, custom attributes, and spans per breakpoint.
-- **Blocks.** A library panel with search and categories. A block is one or more rows, given as neutral rows or as HTML for any known framework. Inserting a block converts it to the active framework.
+- **Blocks.** A block menu with search and categories, in a popover under the toolbar (or `/` on an empty line). A block is one or more rows, given as neutral rows or as HTML for any known framework. Inserting a block converts it to the active framework.
 - **Rich text.**
   - Paragraph, H1–H6 and preformatted.
   - Font family and size.
@@ -332,7 +332,7 @@ A block is one or more rows of columns, described as data rather than markup, so
 - Ids and kinds are optional. `category`, `description` and `thumbnail` are optional too; without a thumbnail, a schematic preview is drawn.
 - `rows` may also be a string of HTML in any known framework. It is detected and converted on insert, which is handy for pasting existing markup, but the JSON form is the one to write by hand.
 
-In the Blocks panel, click a block (or press Enter on it) to add it after the current row, or drag it onto the page: a line shows where it will go, above or below the row under the pointer. Rows can be moved afterwards from their handle menu (or Alt+Up / Alt+Down).
+In the block menu, click a block (or press Enter on it) to add it after the current row, or drag it onto the page: a line shows where it will go, above or below the row under the pointer. Rows can be moved afterwards from their handle menu (or Alt+Up / Alt+Down).
 
 There are three ways to supply blocks:
 
@@ -427,11 +427,11 @@ It lives in its own file, so a page that doesn't use AI downloads none of it (no
 
 As modules: `import { assistantPlugin, httpAssistant } from './blockfusion-assistant.mjs'`, then `BlockFusion.use(assistantPlugin)` or pass it in `plugins`.
 
-Everything is in the **Assistant** menu (sparkle icon): **Chat…**, the one-shot actions, and **Describe the selected image…**.
+The **Assistant** button (sparkle icon) is a split button when chat is on: the button opens the chat, and the arrow beside it the one-shot actions and **Describe the selected image…**. Without chat it is just the menu of actions.
 
 - **Images:** the image dialog gets **Suggest a description**, which fills in the alt text for the author to check and edit; **Describe the selected image…** opens it for the selected image and starts straight away.
 - **One-shot actions** on the selection or the paragraph the cursor is in. The suggestion streams into a dialog, where the author can edit it; **Replace text** applies it as one undo step, keeping the paragraph's element and attributes. Only plain text goes to the assistant, so inline formatting within the replaced text isn't kept.
-- **Chat** (`assistantChat: true`): **Chat…** (or Mod+; then A) opens a side panel to talk to the assistant and have it change the page: "add a row with 3 columns", "in row 2 column 1 write a short welcome". The model sees an outline of the page (rows, columns, the start of their text, the cursor) and can add rows, write into columns and type at the cursor; there's no delete. Each change is an undo step, and the latest request's changes have an Undo button in the chat. A request stops when the model says it's done, repeats itself, or after six rounds.
+- **Chat** (`assistantChat: true`): the Assistant button (or Mod+; then A) opens a popover, centred under the toolbar, to talk to the assistant and have it change the page: "add a row with 3 columns", "in row 2 column 1 write a short welcome". The model sees an outline of the page (rows, columns, the start of their text, the cursor) and can add rows, write into columns and type at the cursor; there's no delete. Each change is an undo step, and the latest request's changes have an Undo button in the chat. The conversation, and a request still running, carry on while the chat is closed. A request stops when the model says it's done, repeats itself, or after six rounds.
 
 ```js
 BlockFusion.create(el, {
@@ -511,7 +511,8 @@ const wordCount = {
 			shortcut: 'Mod+Shift+C',
 			run: (ed) => ed.announce(`${ed.canvas.doc.body.innerText.split(/\s+/).filter(Boolean).length} words`),
 		});
-		// Toolbar items: buttons, menus (with menuitemradio items) and separators.
+		// Toolbar items: buttons, menus (with menuitemradio items), split buttons
+		// ({ type: 'split', command, items }: a command plus a menu) and separators.
 		editor.addToolbarItem({ type: 'button', id: 'wordCount', command: 'wordCount' }, { after: 'help' });
 		// Row/column handle menu actions.
 		editor.addHandleAction({ id: 'row-log', kind: 'row', label: 'Log row', run: (ed, { rowId }) => console.log(rowId) });

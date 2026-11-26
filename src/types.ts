@@ -221,6 +221,20 @@ export type ToolbarItem =
 			minWidth?: string;
 			isEnabled?: (editor: Editor) => boolean;
 	  }
+	| {
+			/**
+			 * Two buttons side by side: the main part runs `command`, the arrow
+			 * part opens a menu of `items` (the assistant: Chat, then its actions).
+			 */
+			type: 'split';
+			id: string;
+			command: string;
+			label: string;
+			icon?: string;
+			/** Name of the arrow part. Default "More <label> options". */
+			menuLabel?: string;
+			items: (editor: Editor) => MenuItem[];
+	  }
 	| { type: 'separator'; id: string };
 
 export interface Panel {

@@ -245,6 +245,22 @@
 	justify-content: space-between;
 	padding-inline: 8px 4px;
 }
+/* Split button: the command, and a narrow arrow for its menu, divided by a line */
+.bf-tsplit {
+	display: inline-flex;
+	align-items: stretch;
+}
+.bf-tsplit > .bf-tbtn:first-child {
+	border-start-end-radius: 0;
+	border-end-end-radius: 0;
+}
+.bf-tsplit > .bf-tbtn-split-more {
+	min-width: 20px;
+	padding-inline: 2px;
+	border-start-start-radius: 0;
+	border-end-start-radius: 0;
+	border-inline-start-color: var(--bf-border-strong);
+}
 .bf-tbtn-value {
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -497,8 +513,8 @@
 	text-align: center;
 }
 
-/* Block library: an insert popover by the button that opened it */
-.bf-blockpop {
+/* Popovers centred under the toolbar (block menu, assistant chat), see ui/popover.ts */
+.bf-pop {
 	position: fixed;
 	inset: auto;
 	z-index: 1000;
@@ -516,21 +532,42 @@
 	box-shadow: var(--bf-shadow);
 	overflow: hidden;
 }
-.bf-blockpop[hidden] {
+.bf-pop[hidden] {
 	display: none;
 }
-.bf-blockpop-head {
+.bf-pop::backdrop {
+	background: rgba(15, 23, 42, 0.5);
+}
+.bf-pop-head {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: 8px;
 }
-.bf-blockpop-title {
+.bf-pop-title {
 	margin: 0;
 	font-size: 15px;
 	font-weight: 650;
 	color: var(--bf-fg);
 }
+.bf-pop-body {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	gap: 8px;
+	min-height: 0;
+}
+/* While a block is dragged, the page under the popover takes the drop */
+.bf-pop.bf-pop-dragging {
+	opacity: 0.2;
+	pointer-events: none;
+}
+.bf-pop.bf-pop-dragging::backdrop {
+	background: transparent;
+	pointer-events: none;
+}
+
+/* Block menu */
 .bf-blockpop-filters {
 	display: flex;
 	gap: 8px;
@@ -564,19 +601,6 @@
 }
 .bf-blockpop-grid > .bf-hint {
 	grid-column: 1 / -1;
-}
-/* Dimmed page behind it, as for the dialogs (Add row and so on) */
-.bf-blockpop::backdrop {
-	background: rgba(15, 23, 42, 0.5);
-}
-/* While a block is dragged, the page under the popover takes the drop */
-.bf-blockpop.bf-blockpop-dragging {
-	opacity: 0.2;
-	pointer-events: none;
-}
-.bf-blockpop.bf-blockpop-dragging::backdrop {
-	background: transparent;
-	pointer-events: none;
 }
 
 .bf-menu {

@@ -14,6 +14,7 @@ import { PAGE_TOOLS, callKey, pageContext, runPageTool } from '../assistant/tool
 import type { AssistantAction, AssistantMessage, ImageDialogHook, MenuItem, Plugin } from '../types';
 import { openDialog } from '../ui/dialog';
 import { h, nextId } from '../ui/dom';
+import { CentredPopover } from '../ui/popover';
 
 /** The one-shot actions offered when the host doesn't give its own. */
 export const DEFAULT_ASSISTANT_ACTIONS: AssistantAction[] = [
@@ -225,8 +226,8 @@ const describeHook: ImageDialogHook = ({ editor, src, alt, setDescribed }) => {
 /** How many rounds of actions one request may take, so a confused model can't run on. */
 const MAX_ROUNDS = 6;
 
-/** The chat side panel: a conversation that can change the page through PAGE_TOOLS. */
-function chatPanel(editor: Editor) {
+/** The chat: a conversation that can change the page through PAGE_TOOLS. */
+function chatPanel(editor: Editor, close?: () => void) {
 	const provider = editor.assistant!;
 	const history: AssistantMessage[] = [];
 	let busy: AbortController | null = null;
@@ -244,12 +245,15 @@ function chatPanel(editor: Editor) {
 			const input = h('textarea', { id: inputId, className: 'bf-input bf-chat-input', rows: '3', placeholder: 'e.g. Add a row with 3 columns', autocomplete: 'off' }) as HTMLTextAreaElement;
 			const send = h('button', { type: 'submit', className: 'bf-btn bf-btn-primary' }, 'Send');
 			const stop = h('button', { type: 'button', className: 'bf-btn', hidden: true }, 'Stop');
+			const closeBtn = close ? h('button', { type: 'button', className: 'bf-btn' }, 'Close') : null;
+			closeBtn?.addEventListener('click', () => close!());
 			const form = h(
 				'form',
 				{ className: 'bf-chat-form' },
 				h('label', { for: inputId, className: 'bf-label' }, 'Ask the assistant'),
 				input,
-				h('div', { className: 'bf-row-buttons' }, send, stop),
+				// Close on the left, Send (or Stop) on the right
+				h('div', { className: 'bf-chat-buttons' }, closeBtn, h('span', { className: 'bf-chat-actions' }, stop, send)),
 			);
 			container.append(intro, log, status, form);
 
@@ -375,8 +379,41 @@ function chatPanel(editor: Editor) {
 				input.focus();
 			});
 		},
-		onOpen() {
-			(editor.root.querySelector('.bf-chat-input') as HTMLElement | null)?.focus();
+	};
+}
+
+/**
+ * The chat in a popover centred under the toolbar, like the block menu. The
+ * conversation (and a request still running) carries on while it's closed.
+ */
+function chatPopover(editor: Editor) {
+	const panel = chatPanel(editor, () => pop.close(true));
+	let built = false;
+	const pop: CentredPopover = new CentredPopover(editor, {
+		title: 'Assistant',
+		className: 'bf-chatpop',
+		// Changes the assistant makes can move focus into the page: stay open
+		closeOnFocusOut: false,
+		onClose: () => editor.toolbar.update(),
+	});
+	return {
+		get isOpen() {
+			return pop.isOpen;
+		},
+		toggle(ed: Editor) {
+			if (pop.isOpen) return pop.close(true);
+			if (!built) {
+				panel.render(pop.body, ed);
+				built = true;
+			}
+			const opener = ed.root.querySelector<HTMLElement>('.bf-toolbar [data-id="assistant"]') ?? (document.activeElement as HTMLElement | null);
+			pop.open(opener);
+			(pop.body.querySelector('.bf-chat-input') as HTMLElement | null)?.focus();
+			ed.toolbar.update();
+		},
+		destroy() {
+			pop.close(false);
+			pop.el.remove();
 		},
 	};
 }
@@ -390,38 +427,44 @@ export const assistantPlugin: Plugin = {
 		const describe = !!p?.describeImage;
 		if (!p || (!chat && !actions.length && !describe)) return;
 		addAssistantStyles();
-		if (chat) editor.addPanel(chatPanel(editor));
+		const chatPop = chat ? chatPopover(editor) : null;
 		if (describe) editor.imageDialogHooks.push(describeHook);
 		const inText = (ed: Editor) => !!ed.canvas.selectionCol;
 		const image = (ed: Editor) => (ed.selectedImage?.isConnected ? ed.selectedImage : null);
-		// One menu for everything: the chat, the one-shot actions, describing an image
-		editor.addToolbarItem(
-			{
-				type: 'menu',
-				id: 'assistant',
-				label: 'Assistant',
+		// The one-shot actions and describing an image, in a menu
+		const menuItems = (ed: Editor) => {
+			const items: MenuItem[] = [];
+			for (const a of actions) items.push({ label: a.label, disabled: !inText(ed), run: () => void rewriteFlow(ed, a) });
+			if (describe) {
+				if (actions.length) items.push({ label: '', separator: true });
+				items.push({
+					label: 'Describe the selected image…',
+					disabled: !image(ed),
+					run: () => void ed.exec('image', { suggest: true }),
+				});
+			}
+			return items;
+		};
+		const place = { after: editor.commands.has('readAloud') ? 'readAloud' : editor.commands.has('dictate') ? 'dictate' : 'image' };
+		if (chatPop) {
+			// Chat (and a shortcut straight to it): the button opens it, and the
+			// arrow beside it the actions, when there are any
+			editor.registerCommand({
+				id: 'assistantChat',
+				label: 'Assistant chat',
 				icon: 'sparkle',
-				items: (ed) => {
-					const items: MenuItem[] = [];
-					if (chat) items.push({ label: ed.openPanel === 'assistant' ? 'Close chat' : 'Chat…', run: () => ed.togglePanel('assistant') });
-					if (chat && (actions.length || describe)) items.push({ label: '', separator: true });
-					for (const a of actions) items.push({ label: a.label, disabled: !inText(ed), run: () => void rewriteFlow(ed, a) });
-					if (describe) {
-						if (actions.length) items.push({ label: '', separator: true });
-						items.push({
-							label: 'Describe the selected image…',
-							disabled: !image(ed),
-							run: () => void ed.exec('image', { suggest: true }),
-						});
-					}
-					return items;
-				},
-			},
-			{ after: editor.commands.has('readAloud') ? 'readAloud' : editor.commands.has('dictate') ? 'dictate' : 'image' },
-		);
-		if (chat) {
-			// A shortcut straight to the chat
-			editor.registerCommand({ id: 'assistantChat', label: 'Assistant chat', chord: 'a', run: (ed) => ed.togglePanel('assistant') });
+				chord: 'a',
+				run: (ed) => chatPop.toggle(ed),
+				isActive: () => chatPop.isOpen,
+			});
+			if (actions.length || describe) {
+				editor.addToolbarItem({ type: 'split', id: 'assistant', command: 'assistantChat', label: 'Assistant chat', icon: 'sparkle', menuLabel: 'Assistant actions', items: menuItems }, place);
+			} else {
+				editor.addToolbarItem({ type: 'button', id: 'assistant', command: 'assistantChat', toggle: true }, place);
+			}
+			return () => chatPop.destroy();
 		}
+		// No chat: the button is just the menu of actions
+		editor.addToolbarItem({ type: 'menu', id: 'assistant', label: 'Assistant', icon: 'sparkle', items: menuItems }, place);
 	},
 };
