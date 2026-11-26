@@ -555,7 +555,12 @@
 	gap: 8px;
 	min-height: 0;
 	overflow: auto;
-	padding: 2px;
+	/* Room for the cards' focus ring (2px outline, 2px out; 3px in forced
+	   colours), which the scrolling box would otherwise cut off at its edges.
+	   The negative margin keeps the cards in line with the filters. */
+	margin: -6px;
+	padding: 6px;
+	scroll-padding: 6px;
 }
 .bf-blockpop-grid > .bf-hint {
 	grid-column: 1 / -1;
