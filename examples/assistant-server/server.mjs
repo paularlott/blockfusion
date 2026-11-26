@@ -6,9 +6,22 @@
  *   AI_BASE_URL=http://localhost:11434/v1 AI_MODEL=qwen2.5:1.5b AI_VISION_MODEL=moondream \
  *     node examples/assistant-server/server.mjs
  *
+ * One model can do it all if it handles text, images and tools, e.g.
+ *   AI_MODEL=inkling-2-mini:latest AI_VISION_MODEL=inkling-2-mini:latest node examples/assistant-server/server.mjs
+ *
  * Then in the page:
- *   assistant: BlockFusion.httpAssistant({ url: 'http://localhost:8787/assistant', chat: true }),
+ *   assistant: BlockFusion.httpAssistant({ url: 'http://localhost:8787/assistant', chat: true, html: true }),
  *   assistantChat: true,
+ *
+ * With html: true, rewrites send a paragraph's HTML and this server asks the
+ * model to keep its tags (the editor sanitises the reply). Leave it off for
+ * small models: the text then carries Markdown-style marks instead.
+ *
+ * AI_TOKEN, when set, must come with every request as "Authorization: Bearer
+ * <token>" (the page passes it with httpAssistant's headers option).
+ *
+ * AI_REASONING sets the OpenAI "reasoning_effort" for models that think
+ * (default "none", so quick actions stay quick; "" leaves it to the model).
  *
  * Chat uses the model server's tool calling, so pick a model that supports
  * it (Qwen3, Llama 3.1+, Mistral, …).
@@ -25,6 +38,10 @@ const VISION = process.env.AI_VISION_MODEL ?? 'moondream';
 const CHAT_MODEL = process.env.AI_CHAT_MODEL ?? MODEL;
 const KEY = process.env.AI_API_KEY ?? '';
 const ORIGIN = process.env.ALLOW_ORIGIN ?? '*';
+const REASONING = process.env.AI_REASONING ?? 'none';
+const TOKEN = process.env.AI_TOKEN ?? '';
+/** Extra request fields: thinking turned down for models that think. */
+const extra = () => (REASONING ? { reasoning_effort: REASONING } : {});
 
 /** One chat round, not streamed: the reply text and any tool calls. */
 async function chatTools(job) {
@@ -54,6 +71,7 @@ async function chatTools(job) {
 			messages,
 			tools: (job.tools ?? []).map((t) => ({ type: 'function', function: t })),
 			temperature: 0.2,
+			...extra(),
 		}),
 	});
 	if (!res.ok) throw new Error(`model server: ${res.status} ${await res.text().catch(() => '')}`);
@@ -75,7 +93,7 @@ async function chat(model, messages, write) {
 	const res = await fetch(`${BASE}/chat/completions`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json', ...(KEY ? { Authorization: `Bearer ${KEY}` } : {}) },
-		body: JSON.stringify({ model, messages, stream: true, temperature: 0.2 }),
+		body: JSON.stringify({ model, messages, stream: true, temperature: 0.2, ...extra() }),
 	});
 	if (!res.ok || !res.body) throw new Error(`model server: ${res.status} ${await res.text().catch(() => '')}`);
 	const dec = new TextDecoder();
@@ -115,9 +133,13 @@ function readJson(req) {
 
 createServer(async (req, res) => {
 	res.setHeader('Access-Control-Allow-Origin', ORIGIN);
-	res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+	res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 	if (req.method === 'OPTIONS') return res.writeHead(204).end();
 	if (req.method !== 'POST' || !req.url?.startsWith('/assistant')) return res.writeHead(404).end();
+	if (TOKEN && req.headers.authorization !== `Bearer ${TOKEN}`) {
+		res.writeHead(401, { 'Content-Type': 'application/json' });
+		return res.end(JSON.stringify({ error: 'not signed in' }));
+	}
 	try {
 		const job = await readJson(req);
 		if (job.task === 'chat') {
@@ -139,8 +161,12 @@ createServer(async (req, res) => {
 				},
 			], write);
 		} else if (job.task === 'rewrite' && job.instruction) {
+			const asHtml = job.format === 'html';
+			const reply = asHtml
+				? 'Reply with only the rewritten HTML: no code fences, notes or quotes, and no tags or attributes that were not in the text.'
+				: 'Reply with only the rewritten text, no notes or quotes.';
 			await chat(MODEL, [
-				{ role: 'system', content: `You are a careful copy editor. ${job.instruction} The text is in the language "${job.lang}". Reply with only the rewritten text, no notes or quotes.` },
+				{ role: 'system', content: `You are a careful copy editor. ${job.instruction} The text is in the language "${job.lang}". ${reply}` },
 				{ role: 'user', content: String(job.text ?? '') },
 			], write);
 		} else {

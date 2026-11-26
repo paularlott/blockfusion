@@ -460,12 +460,20 @@ BlockFusion.create(el, { assistant: BlockFusionAssistant.httpAssistant({ url: '/
 `httpAssistant` POSTs JSON to the URL:
 
 - `{ "task": "describe-image", "lang", "src", "image" }` (`image` is a data URL when the editor can read the file);
-- `{ "task": "rewrite", "action", "instruction", "lang", "text" }`;
+- `{ "task": "rewrite", "action", "instruction", "format", "lang", "text" }`;
 - `{ "task": "chat", "lang", "context", "tools", "messages" }`, only with `chat: true`.
 
-The reply is JSON `{ "text": "…" }` or plain text, which may be streamed; a chat reply is JSON `{ "text", "calls": [{ "name", "arguments" }] }`. `examples/assistant-server/server.mjs` is a dependency-free Node example that passes jobs to any OpenAI-compatible model server (Ollama, llama.cpp, LM Studio), using its tool calling for chat.
+The reply is JSON `{ "text": "…" }` or plain text, which may be streamed; a chat reply is JSON `{ "text", "calls": [{ "name", "arguments" }] }`. `examples/assistant-server/server.mjs` is a dependency-free Node example that passes jobs to any OpenAI-compatible model server (Ollama, llama.cpp, LM Studio, OpenAI), using its tool calling for chat.
 
-A provider is any object with `describeImage(req)`, `rewrite(req)` and/or `chat(req)` (see `AssistantProvider` in `src/types.ts`); the editor offers only what it has. `demo/ai.html` tries the in-browser models, or a server with `?server=`.
+Options:
+
+- **`html: true`** for a capable model: a rewrite sends each paragraph's HTML (`"format": "html"`) and expects HTML back. The editor sanitises the reply before it goes in: text-level tags only, a short list of attributes, and safe link addresses (relative, http(s), mailto, tel, or a CMS tag such as `[[~26]]`). Without it, the text carries Markdown-style marks (`**bold**`, `*italic*`, `[words](1)`); the editor rebuilds links and styled text from the original elements, and puts formatting back on the same words when a small model drops the marks.
+- **`headers`**: extra request headers, or a function (sync or async) called before every request, so a page can send a fresh token: ``headers: async () => ({ Authorization: `Bearer ${await getToken()}` })``. The example server checks one when `AI_TOKEN` is set.
+- **`credentials`**: the fetch credentials mode (default `same-origin`, so a session cookie goes with it).
+
+Each paragraph or list item is rewritten in its own request and keeps its element.
+
+A provider is any object with `describeImage(req)`, `rewrite(req)` and/or `chat(req)`, and `html` when its rewrite takes HTML (see `AssistantProvider` in `src/types.ts`); the editor offers only what it has. `demo/ai.html` uses the in-browser models; `demo/ai-server.html` uses the example server with a local Ollama model.
 
 ## Media provider
 

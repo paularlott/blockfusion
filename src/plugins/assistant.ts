@@ -7,12 +7,15 @@
  *
  * Formatting goes to the assistant as Markdown-style marks (**bold**,
  * *italic*, [link text](1) ...) and is rebuilt from the original elements
- * when the text is replaced (see assistant/marked.ts). Each paragraph or list
- * item keeps its own element.
+ * when the text is replaced (see assistant/marked.ts). A provider that takes
+ * HTML (a capable server-side model) gets each paragraph's HTML instead, and
+ * its reply is sanitised before it goes in. Each paragraph or list item is
+ * its own request and keeps its own element.
  */
 import type { Editor } from '../editor';
 import { addAssistantStyles } from '../assistant/styles';
 import { type Marks, type Own, rebuild, toMarked } from '../assistant/marked';
+import { sanitizeHtml } from '../assistant/sanitize';
 import { PAGE_TOOLS, callKey, pageContext, runPageTool } from '../assistant/tools';
 import type { AssistantAction, AssistantMessage, ImageDialogHook, MenuItem, Plugin } from '../types';
 import { openDialog } from '../ui/dialog';
@@ -69,6 +72,8 @@ function targetRange(editor: Editor): Target | null {
 }
 
 /** How the marks are explained to the model, added to the action's instruction. */
+const HTML_RULE =
+	'The text is HTML: rewrite all of its words, inside and outside the tags, and keep every tag and attribute exactly as written around the words they belong to. Reply with the HTML only.';
 const MARKS_RULE =
 	'The text marks its formatting: **bold**, *italic*, `code`, and [words](1) for a link or styled words. ' +
 	'Keep each mark around the words it belongs to, and keep every [..](n) with its number.';
@@ -84,10 +89,18 @@ async function rewriteFlow(editor: Editor, action: AssistantAction): Promise<voi
 		editor.notify('Select some text, or put the cursor in a paragraph, first.', 'info', { key: 'assistant' });
 		return;
 	}
-	// The text with its formatting as marks; each block a paragraph of its own
+	const d = editor.canvas.doc;
+	// The text with its formatting as marks (or HTML); each block a paragraph of its own
 	const marks: Marks = { refs: [], spans: [] };
 	const owned: Own[] = [];
+	const html = !!provider.html;
+	const htmlOf = (node: Node) => {
+		const box = d.createElement('div');
+		box.append(node.cloneNode(true));
+		return node.nodeType === 1 ? (node as Element).innerHTML.trim() : box.innerHTML.trim();
+	};
 	const parts = (target.blocks ?? [range.cloneContents()]).map((node) => {
+		if (html) return htmlOf(node);
 		const r0 = marks.refs.length;
 		const s0 = marks.spans.length;
 		const m = toMarked(node, marks);
@@ -100,10 +113,20 @@ async function rewriteFlow(editor: Editor, action: AssistantAction): Promise<voi
 	const paragraphs = (text: string) => text.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
 	// A paragraph's own formatting; one paragraph (part of a block) owns it all
 	const ownedFor = (i: number): Own | undefined => (target.blocks ? owned[i] ?? { refs: [], spans: [] } : undefined);
-	const instruction = [action.prompt, hasMarks ? MARKS_RULE : ''].filter(Boolean).join(' ');
+	const instruction = [action.prompt, html ? HTML_RULE : hasMarks ? MARKS_RULE : ''].filter(Boolean).join(' ');
+	// A paragraph's reply, ready to go in: HTML is sanitised, marks are rebuilt
+	const build = (text: string, i: number) => {
+		if (!html) return rebuild(text, marks, d, ownedFor(i));
+		const frag = sanitizeHtml(text.replace(/^```(?:html)?\s*|\s*```$/gi, ''), d);
+		// Links the reply left out (its words reworded or dropped)
+		const src = target.blocks?.[i] ?? (i === 0 ? range.cloneContents() : null);
+		const had = src ? Array.from(src.querySelectorAll('a[href]')) : [];
+		const kept = new Set(Array.from(frag.querySelectorAll('a[href]')).map((a) => a.getAttribute('href')));
+		const lost = had.filter((a) => !kept.has(a.getAttribute('href'))).map((a) => (a.textContent ?? '').trim()).filter(Boolean);
+		return { frag, lost };
+	};
 
 	// Show what will be replaced
-	const d = editor.canvas.doc;
 	const sel = d.getSelection()!;
 	sel.removeAllRanges();
 	sel.addRange(range);
@@ -146,6 +169,7 @@ async function rewriteFlow(editor: Editor, action: AssistantAction): Promise<voi
 				text: part,
 				task: action.id,
 				instruction,
+				format: html ? 'html' : 'marked',
 				lang,
 				signal: abort.signal,
 				onToken: (t) => {
@@ -175,7 +199,7 @@ async function rewriteFlow(editor: Editor, action: AssistantAction): Promise<voi
 			output.readOnly = false;
 			status.textContent = `Suggested by ${provider.name ?? 'the assistant'}. Check it, edit it if you like, then replace your text.`;
 			// Formatting that can't be put back: its words were changed as well
-			const lost = paragraphs(result).flatMap((p, i) => rebuild(p, marks, d, ownedFor(i)).lost);
+			const lost = paragraphs(result).flatMap((p, i) => build(p, i).lost);
 			if (lost.length) status.textContent += ` Formatting on ${lost.map((t) => `“${t}”`).join(', ')} can’t be kept, as the wording changed; add it again after replacing.`;
 			if (replaceBtn) replaceBtn.disabled = false;
 			output.focus();
@@ -205,14 +229,14 @@ async function rewriteFlow(editor: Editor, action: AssistantAction): Promise<voi
 					else block.remove();
 					return;
 				}
-				block.replaceChildren(rebuild(paras[i], marks, doc, ownedFor(i)).frag);
+				block.replaceChildren(build(paras[i], i).frag);
 				last = block;
 			});
 			// More came back: they follow the last block (list items in a list)
 			let after = (last ?? blocks[0]) as HTMLElement;
 			for (const p of paras.slice(blocks.length)) {
 				const next = doc.createElement(after.tagName === 'LI' ? 'li' : 'p');
-				next.append(rebuild(p, marks, doc, { refs: [], spans: [] }).frag);
+				next.append(html ? sanitizeHtml(p, doc) : rebuild(p, marks, doc, { refs: [], spans: [] }).frag);
 				after.after(next);
 				after = next;
 			}
@@ -225,7 +249,7 @@ async function rewriteFlow(editor: Editor, action: AssistantAction): Promise<voi
 			return;
 		}
 		// Part of a paragraph: swap just the selected part
-		const frag = rebuild(paras.join(' '), marks, doc).frag;
+		const frag = build(paras.join(' '), 0).frag;
 		const end = frag.lastChild;
 		range.deleteContents();
 		range.insertNode(frag);

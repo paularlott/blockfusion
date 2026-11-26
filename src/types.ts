@@ -80,6 +80,12 @@ export interface AssistantMessage {
 export interface AssistantProvider {
 	/** Shown with suggestions, e.g. "on this device" or "our server". */
 	name?: string;
+	/**
+	 * rewrite() takes and returns HTML (for capable, server-side models). The
+	 * editor sanitises the reply before it goes into the page. Otherwise the
+	 * text goes out with Markdown-style marks for its formatting.
+	 */
+	html?: boolean;
 	/** Describe an image for its alt text. `image` is the file when the editor could read it. */
 	describeImage?(req: {
 		src: string;
@@ -110,6 +116,8 @@ export interface AssistantProvider {
 		task: AssistantTask;
 		/** The action's instruction, e.g. "Make the text shorter…". */
 		instruction: string;
+		/** How `text` (and the reply) carries formatting: HTML, or Markdown-style marks. */
+		format: 'html' | 'marked';
 		lang: string;
 		signal: AbortSignal;
 		onToken?(text: string): void;
