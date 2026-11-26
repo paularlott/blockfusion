@@ -1,8 +1,8 @@
 # AGENTS.md
 
-Guidance for coding agents working on BlockFusion. `README.md` is the user-facing reference
-(options, API, converters, blocks, plugins, dictation, read aloud, the AI assistant,
-accessibility). `ARCHITECTURE.md` explains the
+Guidance for coding agents working on BlockFusion. `README.md` is the overview and `docs/` the
+user-facing reference (options, API, frameworks, blocks, plugins, dictation, read aloud, the AI
+assistant, accessibility). Update the page in `docs/` that covers what you change. `ARCHITECTURE.md` explains the
 design. This file covers the conventions and pitfalls that matter when changing the code.
 
 ## Commands
@@ -108,7 +108,7 @@ There are two separate style layers. Don't mix them.
   lives in `grid.ts` and class mapping in `classmap.ts`. New frameworks reuse them.
 - Round trips are tested: framework A → model → framework A must be lossless, and A → B must
   keep the layout. Add the new framework to those tests (`test/converters.test.ts`).
-- Breakpoints map by name, not pixel width (see Known limitations in the README). Document
+- Breakpoints map by name, not pixel width (see Known limitations in `docs/development.md`). Document
   any new lossy mapping there.
 
 ## Testing in a browser

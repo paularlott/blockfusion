@@ -7,7 +7,7 @@ An optional BlockFusion assistant that runs small open models **in the browser**
 | Describe an image (alt text) | [Florence-2-base](https://huggingface.co/onnx-community/Florence-2-base-ft) | MIT | about 360 MB with WebGPU, 275 MB without |
 | One-shot text actions (improve, fix, …) and the chat that changes the page | [Qwen3-0.6B](https://huggingface.co/onnx-community/Qwen3-0.6B-ONNX) | Apache-2.0 | about 570 MB with WebGPU (one download for both) |
 
-For a model on your server instead, use the editor's `completionsAssistant` (in the assistant bundle; see the editor's README).
+For a model on your server instead, use the editor's `completionsAssistant` (in the assistant bundle; see `docs/ai-assistant.md` in the editor's repository).
 
 Nothing leaves the device. Nothing loads until a feature is first used: the editor side is 4 KB, transformers.js (570 KB) and the ONNX Runtime WebAssembly build the browser needs follow on first use, then the model.
 
