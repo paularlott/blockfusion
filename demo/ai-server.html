@@ -42,7 +42,7 @@
 			</ul>
 			<pre><code>AI_MODEL=inkling-2-mini:latest AI_TOKEN=demo-token node examples/relay.mjs</code></pre>
 			<ul>
-				<li>Serve this folder over http://localhost (<code>npm run demo</code>) and open this page. Add <code>?relay=URL</code> to use a relay elsewhere.</li>
+				<li>Serve this folder over http://localhost (<code>npm run demo</code>) and open this page.</li>
 			</ul>
 		</section>
 	</main>
@@ -50,7 +50,6 @@
 	<!-- The assistant is its own file; it registers itself with the editor -->
 	<script src="../dist/blockfusion-assistant.js"></script>
 	<script>
-		const url = new URLSearchParams(location.search).get('relay') || 'http://localhost:8790/v1/chat/completions';
 		window.editor = BlockFusion.create(document.getElementById('content'), {
 			converter: 'fusioncss',
 			stylesheets: ['vendor/fusioncss.min.css', 'canvas.css'],
@@ -58,7 +57,7 @@
 			defaultBlocks: false,
 			// A model on a server, through a backend that relays the requests
 			assistant: BlockFusionAssistant.completionsAssistant({
-				url,
+				url: 'http://localhost:8790/v1/chat/completions',
 				// A real page would hand over a fresh token here (called before each request)
 				headers: () => ({ Authorization: 'Bearer demo-token' }),
 				// Keep a thinking model quick

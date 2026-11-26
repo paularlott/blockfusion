@@ -175,6 +175,20 @@ export function localAssistant(o: LocalAssistantOptions = {}): AssistantProvider
 	if (imageModel) {
 		provider.describeImage = async ({ src, image, signal, onProgress }) => {
 			const t = await load(o);
+			// The image first, so one that can't be read fails before a model download
+			// The editor passes the file when it could read it. An image on another
+			// site that doesn't allow reading (no CORS) can't be read in a browser at all.
+			let raw;
+			if (image) raw = await t.RawImage.fromBlob(image);
+			else {
+				const url = new URL(src, document.baseURI);
+				try {
+					raw = await t.RawImage.fromURL(url.href);
+				} catch (err) {
+					if (url.origin === location.origin) throw err;
+					throw new Error(`the image is on another site (${url.hostname}) that doesn't let pages read its images, so it can't be described in the browser. Put the image on this site, or describe it yourself.`);
+				}
+			}
 			vision ??= (async () => {
 				const device = await pickDevice(o);
 				const progress_callback = progressReporter('image', onProgress);
@@ -195,7 +209,6 @@ export function localAssistant(o: LocalAssistantOptions = {}): AssistantProvider
 			const { model, processor, tokenizer } = await vision;
 			signal.throwIfAborted();
 			onProgress?.({ text: 'Looking at the image…' });
-			const raw = image ? await t.RawImage.fromBlob(image) : await t.RawImage.fromURL(src);
 			const task = '<DETAILED_CAPTION>';
 			const prompts = processor.construct_prompts(task);
 			const inputs = await processor(raw, prompts);

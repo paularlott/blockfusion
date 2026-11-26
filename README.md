@@ -467,6 +467,8 @@ BlockFusion.create(el, {
 
 `completionsAssistant` builds the prompts, tool calls and image requests in the page and sends them in the OpenAI chat completions format, so your backend only relays them to a model server: it adds the model and API key, and checks the user may use it. It works with anything that serves `/v1/chat/completions`: OpenAI, Ollama, LM Studio, llama.cpp, vLLM, or a gateway in front of other providers. `examples/relay.mjs` is a dependency-free Node relay to start from (it checks a token, sets the model and streams the reply back).
 
+Images go to the model as data when the page can read the file. An image on another site that doesn't allow pages to read it (no CORS) goes as its address, and many model servers (Ollama among them) only take data, so the example relay fetches it: http(s) only, images only, up to 8 MB, and never from private or local addresses unless listed in `AI_IMAGE_HOSTS` (it would otherwise let anyone reach machines inside your network). With in-browser models such an image can't be described at all; the editor says so.
+
 Options:
 
 - **`url`**, **`headers`** and **`credentials`**: where to send requests. `headers` may be a function (sync or async) called before every request, so a fresh token goes with each; `credentials` defaults to `same-origin`, so a session cookie goes too.
