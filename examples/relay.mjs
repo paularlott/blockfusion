@@ -1,14 +1,14 @@
 /**
- * The backend for completionsAssistant: it checks the caller, adds the model
+ * The backend for BlockFusion's completionsAssistant: it checks the caller, adds the model
  * and API key, and passes the chat completions request through to a model
  * server, streaming the reply back. The prompts are built in the browser,
  * so this stays this small. No dependencies; Node 18+.
  *
  *   AI_BASE_URL=http://localhost:11434/v1 AI_MODEL=inkling-2-mini:latest AI_TOKEN=secret \
- *     node extensions/ai/examples/relay.mjs
+ *     node examples/relay.mjs
  *
  * Then in the page:
- *   completionsAssistant({ url: 'http://localhost:8790/v1/chat/completions',
+ *   BlockFusionAssistant.completionsAssistant({ url: 'http://localhost:8790/v1/chat/completions',
  *     headers: { Authorization: 'Bearer secret' }, body: { reasoning_effort: 'none' } })
  *
  * This is an example to build on: in a real app, check the user's session
@@ -70,7 +70,7 @@ createServer(async (req, res) => {
 })
 	.on('error', (err) => {
 		if (err.code !== 'EADDRINUSE') throw err;
-		console.error(`Port ${PORT} is already in use. Stop the other server, or pick another port: PORT=8791 node extensions/ai/examples/relay.mjs`);
+		console.error(`Port ${PORT} is already in use. Stop the other server, or pick another port: PORT=8791 node examples/relay.mjs`);
 		process.exit(1);
 	})
 	.listen(PORT, () => console.log(`BlockFusion completions relay on http://localhost:${PORT}/v1/chat/completions -> ${BASE}${MODEL ? ` (${MODEL})` : ''}`));

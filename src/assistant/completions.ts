@@ -7,9 +7,8 @@
  * It works with anything that serves /v1/chat/completions: OpenAI, Ollama,
  * LM Studio, llama.cpp, vLLM, or a gateway in front of other providers.
  *
- *   import { completionsAssistant } from './blockfusion-ai/blockfusion-ai.mjs';
  *   BlockFusion.create(el, {
- *     assistant: completionsAssistant({
+ *     assistant: BlockFusionAssistant.completionsAssistant({
  *       url: '/ai/chat/completions',
  *       headers: async () => ({ Authorization: `Bearer ${await getToken()}` }),
  *     }),
@@ -20,10 +19,11 @@
  *
  *   completionsAssistant({ send: (body, { signal }) => myApi.post('/ai', body, { signal }) })
  *
- * The reply may be streamed (text/event-stream) or plain JSON. Nothing here
- * loads the in-browser models.
+ * The reply may be streamed (text/event-stream) or plain JSON. examples/relay.mjs
+ * is a small backend to start from. For models in the browser instead, see
+ * the blockfusion-ai extension.
  */
-import type { AssistantProvider, AssistantTool, AssistantToolCall } from '../../../src/types';
+import type { AssistantProvider, AssistantTool, AssistantToolCall } from '../types';
 
 /** A chat completions request, as sent to the backend. */
 export interface CompletionsRequest {

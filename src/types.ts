@@ -325,8 +325,9 @@ export interface EditorOptions {
 	readAloud?: boolean | ReadAloudOptions;
 	/**
 	 * An AI assistant: "Suggest a description" for images and an Assistant
-	 * menu for text. Off by default. See BlockFusion.httpAssistant for a
-	 * server, or the blockfusion-ai extension for a model in the browser.
+	 * menu for text. Off by default. See completionsAssistant (in the
+	 * assistant bundle) for a model on your server, or the blockfusion-ai
+	 * extension's localAssistant for models in the browser.
 	 */
 	assistant?: AssistantProvider;
 	/**

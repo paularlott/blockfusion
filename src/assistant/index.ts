@@ -11,14 +11,16 @@
  *   import { assistantPlugin } from './blockfusion-assistant.mjs';
  *   BlockFusion.use(assistantPlugin);   // or plugins: [assistantPlugin]
  *
- * Then give editors an `assistant` provider (httpAssistant, or the
- * blockfusion-ai extension for models in the browser).
+ * Then give editors an `assistant` provider: completionsAssistant for a
+ * model on your server (any OpenAI-compatible API, through your backend), or
+ * the blockfusion-ai extension's localAssistant for models in the browser.
  */
 import { assistantPlugin, DEFAULT_ASSISTANT_ACTIONS } from '../plugins/assistant';
 import type { Plugin } from '../types';
-import { httpAssistant } from './http';
+import { completionsAssistant } from './completions';
 
-export { assistantPlugin, DEFAULT_ASSISTANT_ACTIONS, httpAssistant };
+export { assistantPlugin, completionsAssistant, DEFAULT_ASSISTANT_ACTIONS };
+export type { CompletionsAssistantOptions, CompletionsMessage, CompletionsRequest } from './completions';
 export { callKey, pageContext, PAGE_TOOLS, runPageTool } from './tools';
 
 // Loaded as a script after blockfusion.js: register with the editor straight away

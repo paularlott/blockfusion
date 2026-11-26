@@ -1,12 +1,12 @@
 {
   "name": "blockfusion-ai",
   "version": "0.1.0",
-  "description": "Optional AI for BlockFusion: small open models in the browser, or any OpenAI-compatible model through your server.",
+  "description": "Optional in-browser AI for BlockFusion: image descriptions, text rewrites and chat with small open models.",
   "license": "MIT",
   "author": "Paul Arlott",
   "type": "module",
   "module": "dist/blockfusion-ai.mjs",
-  "files": ["dist", "src", "examples", "README.md"],
+  "files": ["dist", "src", "README.md"],
   "scripts": {
     "build": "node scripts/build.mjs"
   },

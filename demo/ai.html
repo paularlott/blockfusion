@@ -38,7 +38,7 @@
 			<h2>Running it</h2>
 			<ul>
 				<li>Build the extension (<code>npm --prefix extensions/ai install &amp;&amp; npm --prefix extensions/ai run build</code>) and serve this page over http://localhost (<code>npm run demo</code>).</li>
-				<li>To use a server instead, run <code>examples/assistant-server/server.mjs</code> with an OpenAI-compatible model server, and open this page with <code>?server=http://localhost:8787/assistant</code>.</li>
+				<li>For a model on a server instead, see <a href="ai-server.html">ai-server.html</a>.</li>
 			</ul>
 		</section>
 	</main>
@@ -47,22 +47,18 @@
 	<script src="../dist/blockfusion-assistant.js"></script>
 	<script type="module">
 		import { localAssistant } from '../extensions/ai/dist/blockfusion-ai.mjs';
-		// ?server=URL uses a server (examples/assistant-server); otherwise models run in this browser
-		const server = new URLSearchParams(location.search).get('server');
 		window.editor = BlockFusion.create(document.getElementById('content'), {
 			converter: 'fusioncss',
 			stylesheets: ['vendor/fusioncss.min.css', 'canvas.css'],
 			bodyClass: 'demo-pad',
 			defaultBlocks: false,
 			// The app chooses the models (each can be false), the one-shot actions and whether to chat
-			assistant: server
-				? BlockFusionAssistant.httpAssistant({ url: server, name: 'the example server', chat: true })
-				: localAssistant({
-						// One language model for the quick actions and the chat: one download
-						textModel: 'onnx-community/Qwen3-0.6B-ONNX',
-						chatModel: 'onnx-community/Qwen3-0.6B-ONNX',
-						imageModel: 'onnx-community/Florence-2-base-ft',
-					}),
+			assistant: localAssistant({
+				// One language model for the quick actions and the chat: one download
+				textModel: 'onnx-community/Qwen3-0.6B-ONNX',
+				chatModel: 'onnx-community/Qwen3-0.6B-ONNX',
+				imageModel: 'onnx-community/Florence-2-base-ft',
+			}),
 			assistantChat: true,
 			assistantActions: [
 				{ id: 'fix', label: 'Fix spelling and grammar', prompt: "Rewrite the text with every spelling, grammar and punctuation mistake corrected, including verb forms (we has → we have) and confused words (then/than, to/too, their/they're). Keep the wording otherwise the same." },

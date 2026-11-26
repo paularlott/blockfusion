@@ -7,7 +7,7 @@ An optional BlockFusion assistant that runs small open models **in the browser**
 | Describe an image (alt text) | [Florence-2-base](https://huggingface.co/onnx-community/Florence-2-base-ft) | MIT | about 360 MB with WebGPU, 275 MB without |
 | One-shot text actions (improve, fix, …) and the chat that changes the page | [Qwen3-0.6B](https://huggingface.co/onnx-community/Qwen3-0.6B-ONNX) | Apache-2.0 | about 570 MB with WebGPU (one download for both) |
 
-For a model on your server instead, see [completionsAssistant](#a-model-on-your-server-completionsassistant) below.
+For a model on your server instead, use the editor's `completionsAssistant` (in the assistant bundle; see the editor's README).
 
 Nothing leaves the device. Nothing loads until a feature is first used: the editor side is 4 KB, transformers.js (570 KB) and the ONNX Runtime WebAssembly build the browser needs follow on first use, then the model.
 
@@ -39,39 +39,6 @@ Options:
 
 The page must be served over http(s) (module imports and the model cache don't work from `file://`).
 
-## A model on your server: completionsAssistant
-
-`completionsAssistant` is the other way to use a model: one on a server, through the OpenAI chat completions format. It builds the prompts, tool calls and image requests in the page, so your backend only relays them to the model server, adding the model and API key and checking the user may use it. It works with anything that serves `/v1/chat/completions`: OpenAI, Ollama, LM Studio, llama.cpp, vLLM, or a gateway in front of other providers. It doesn't load the in-browser models.
-
-```js
-import { completionsAssistant } from './blockfusion-ai/blockfusion-ai.mjs';
-
-BlockFusion.create(el, {
-	assistant: completionsAssistant({
-		url: '/ai/chat/completions',
-		// Called before every request, so a token can be refreshed
-		headers: async () => ({ Authorization: `Bearer ${await getToken()}` }),
-		// Extra request fields, e.g. keep a thinking model quick
-		body: { reasoning_effort: 'none' },
-	}),
-	assistantChat: true,
-});
-```
-
-Options:
-
-- `url`, `headers` (an object, or a function called before each request) and `credentials`; or `send(body, { signal })`, returning a `Response`, to make the request yourself.
-- `model`, `visionModel`, `chatModel`: model names to put in requests. Leave them out to let the backend choose.
-- `body`: extra fields for every request.
-- `html` (default true): rewrites send each paragraph's HTML and take HTML back, which the editor sanitises. Set false for a small model, to send Markdown-style marks instead.
-- `chat` and `images` (default true): turn off the chat (needs tool calls) or image descriptions (needs a model that takes images).
-
-Replies may be streamed (`text/event-stream`) or plain JSON. `examples/relay.mjs` is a dependency-free Node relay to start from: it checks a token, sets the model and streams the reply back. `demo/ai-server.html?relay` in the editor's repo uses it with a local Ollama model:
-
-```sh
-AI_MODEL=inkling-2-mini:latest AI_TOKEN=demo-token node extensions/ai/examples/relay.mjs
-```
-
 ## What to expect
 
 These are small models, picked to be quick to download. On a test with WebGPU (after the download): an image description in about 2 seconds, a paragraph rewrite in about 10.
@@ -95,7 +62,7 @@ Same prompts, WebGPU, in a browser (six chat requests; six quick actions on thre
 
 Any of these can be set with `textModel` or `chatModel`. Gemma's licence isn't Apache or MIT: an app that uses it takes on Google's Gemma Terms of Use.
 
-Every suggestion is shown for the author to check before it's used. For better results, use a bigger model in the browser, or a server: see `BlockFusionAssistant.httpAssistant` and `examples/assistant-server` in the main repository.
+Every suggestion is shown for the author to check before it's used. For better results, use a bigger model in the browser, or a model on your server: see `BlockFusionAssistant.completionsAssistant` and `examples/relay.mjs` in the main repository.
 
 ## Licence
 

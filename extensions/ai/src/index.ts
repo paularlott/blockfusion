@@ -265,5 +265,3 @@ Call tools in the order they should happen. After tools run you'll be told what 
 
 	return provider;
 }
-export { completionsAssistant } from './completions';
-export type { CompletionsAssistantOptions, CompletionsRequest, CompletionsMessage } from './completions';

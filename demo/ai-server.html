@@ -22,7 +22,7 @@
 <body>
 	<main>
 		<h1>BlockFusion server AI demo</h1>
-		<p class="hint">The same editor with a model on a server (here a local Ollama). Put the cursor in a paragraph and use <strong>Assistant actions</strong>: the paragraph's HTML goes to the model, so bold, links and coloured text are kept. Open the <strong>Assistant</strong> chat to change the page, or select the image, use the image button and <strong>Suggest a description</strong>. Everything can be undone.</p>
+		<p class="hint">The same editor with a model on a server (here a local Ollama, through a small relay). Put the cursor in a paragraph and use <strong>Assistant actions</strong>: the paragraph's HTML goes to the model, so bold, links and coloured text are kept. Open the <strong>Assistant</strong> chat to change the page, or select the image, use the image button and <strong>Suggest a description</strong>. Everything can be undone.</p>
 		<textarea id="content" name="content" hidden>
 <div class="row"><div class="span-t12"><h2>Our new garden</h2><p>We has planted <strong>lots of different kinds of flowers</strong> in the garden this year and they is growing really very well indeed, much better then last year when it was <em>to dry</em>. See our <a href="https://example.com/planting-guide" title="Planting guide">planting guide</a> for what went where.</p><ul><li>The <span style="color: rgb(26, 95, 122)">blue border</span> by the gate is lavender and catmint.</li><li>Ask about <a href="mailto:garden@example.com">visiting the garden</a> in the summer.</li></ul><p><img src="test-image.png" alt="" width="128"></p></div></div>
 		</textarea>
@@ -30,49 +30,41 @@
 		<section class="how" aria-labelledby="how-title">
 			<h2 id="how-title">How it works</h2>
 			<ul>
-				<li>The editor talks to <code>examples/assistant-server/server.mjs</code> with <code>httpAssistant</code>. The server passes each job to any OpenAI-compatible model server; this demo uses Ollama with <code>inkling-2-mini</code>, one model that rewrites text, chats with tools and looks at images.</li>
-				<li>With <code>html: true</code>, a quick action sends each paragraph or list item's HTML and gets HTML back. The editor sanitises it before it goes in: only text-level tags, safe attributes and safe link addresses are kept. Small models do better with Markdown-style marks, which is what the in-browser demo (<a href="ai.html">ai.html</a>) uses.</li>
+				<li>The page uses <code>completionsAssistant</code> from the assistant bundle. It builds the prompts, tool calls and image requests itself and sends them in the OpenAI chat completions format, so the backend only relays them: <code>examples/relay.mjs</code> checks a token, adds the model and passes each request to a model server. This demo uses Ollama with <code>inkling-2-mini</code>, one model that rewrites text, chats with tools and looks at images.</li>
+				<li>A quick action sends each paragraph or list item's HTML and gets HTML back. The editor sanitises it before it goes in: only text-level tags, safe attributes and safe link addresses are kept. For a small model, set <code>html: false</code> to send Markdown-style marks instead, as the in-browser demo (<a href="ai.html">ai.html</a>) does.</li>
 				<li>The chat sees an outline of the page and can add rows, write into columns and type at the cursor. Each request's changes can be undone from the chat.</li>
-				<li>The page sends text and images to your server only; the server decides which model sees them.</li>
+				<li>The page sends text and images to your backend only; the backend decides which model sees them.</li>
 			</ul>
 			<h2>Running it</h2>
 			<ul>
 				<li>Install <a href="https://ollama.com">Ollama</a> and pull a model that handles text, images and tools: <code>ollama pull inkling-2-mini</code>.</li>
-				<li>Start the example server:</li>
+				<li>Start the relay:</li>
 			</ul>
-			<pre><code>AI_MODEL=inkling-2-mini:latest AI_VISION_MODEL=inkling-2-mini:latest node examples/assistant-server/server.mjs</code></pre>
+			<pre><code>AI_MODEL=inkling-2-mini:latest AI_TOKEN=demo-token node examples/relay.mjs</code></pre>
 			<ul>
-				<li>Serve this folder over http://localhost (<code>npm run demo</code>) and open this page. Add <code>?server=URL</code> to use another assistant server.</li>
-				<li>Or open it with <code>?relay</code>: the AI extension's <code>completionsAssistant</code> builds the prompts in the page and sends standard chat completions requests, so the backend only relays them, adding the model and checking a token. Start the relay with:</li>
+				<li>Serve this folder over http://localhost (<code>npm run demo</code>) and open this page. Add <code>?relay=URL</code> to use a relay elsewhere.</li>
 			</ul>
-			<pre><code>AI_MODEL=inkling-2-mini:latest AI_TOKEN=demo-token node extensions/ai/examples/relay.mjs</code></pre>
 		</section>
 	</main>
 	<script src="../dist/blockfusion.js"></script>
 	<!-- The assistant is its own file; it registers itself with the editor -->
 	<script src="../dist/blockfusion-assistant.js"></script>
-	<script type="module">
-		import { completionsAssistant } from '../extensions/ai/dist/blockfusion-ai.mjs';
-		const params = new URLSearchParams(location.search);
-		// ?relay: the prompts are built here and a relay passes them to the model server
-		// (extensions/ai/examples/relay.mjs); otherwise the example job server builds them
-		const relay = params.has('relay');
-		const assistant = relay
-			? completionsAssistant({
-					url: params.get('relay') || 'http://localhost:8790/v1/chat/completions',
-					// A real page would fetch a fresh token here (a function is called before each request)
-					headers: () => ({ Authorization: 'Bearer demo-token' }),
-					body: { reasoning_effort: 'none' },
-					name: 'the local Ollama relay',
-				})
-			: BlockFusionAssistant.httpAssistant({ url: params.get('server') || 'http://localhost:8787/assistant', name: 'the local Ollama server', chat: true, html: true });
+	<script>
+		const url = new URLSearchParams(location.search).get('relay') || 'http://localhost:8790/v1/chat/completions';
 		window.editor = BlockFusion.create(document.getElementById('content'), {
 			converter: 'fusioncss',
 			stylesheets: ['vendor/fusioncss.min.css', 'canvas.css'],
 			bodyClass: 'demo-pad',
 			defaultBlocks: false,
-			// A capable server-side model: HTML in and out, chat with tools
-			assistant,
+			// A model on a server, through a backend that relays the requests
+			assistant: BlockFusionAssistant.completionsAssistant({
+				url,
+				// A real page would hand over a fresh token here (called before each request)
+				headers: () => ({ Authorization: 'Bearer demo-token' }),
+				// Keep a thinking model quick
+				body: { reasoning_effort: 'none' },
+				name: 'the local Ollama model',
+			}),
 			assistantChat: true,
 			assistantActions: [
 				{ id: 'fix', label: 'Fix spelling and grammar', prompt: "Rewrite the text with every spelling, grammar and punctuation mistake corrected, including verb forms (we has → we have) and confused words (then/than, to/too, their/they're). Keep the wording otherwise the same." },
