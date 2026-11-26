@@ -4,6 +4,8 @@
  * Breakpoints match fusionCSS: 768, 992, 1200 and 1600px, plus 1920px.
  * Hosts using this converter on their site include `dist/blockfusion-grid.css`
  * (12 columns) or the CSS from `cssGridStylesheet(n)` for another grid size.
+ * The stylesheet is layout only (grid, spans, responsive hiding): everything
+ * else, including the `bf-btn` button classes, is styled by the site's own CSS.
  */
 import { createGridConverter, spanParser } from './grid';
 
@@ -30,9 +32,6 @@ export function cssGridStylesheet(columns = 12): string {
 		`.bf-grid{display:grid;grid-template-columns:repeat(${columns},minmax(0,1fr));gap:var(--bf-grid-gap,1.5rem)}`,
 		`.bf-grid>*{grid-column:span ${columns};min-width:0}`,
 		spans('col', columns),
-		'.bf-btn{display:inline-block;padding:.5rem 1rem;border-radius:.375rem;font-weight:600;text-decoration:none}',
-		'.bf-btn-primary{background:#e2e8f0;color:#0f172a}',
-		'.bf-btn-accent{background:#0e7490;color:#fff}',
 		`@media (max-width:${WIDTHS[0][1] - 0.02}px){.bf-hidden-xs{display:none!important}}`,
 	];
 	WIDTHS.forEach(([name, min], i) => {

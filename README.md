@@ -211,7 +211,10 @@ Bootstrap 6 is in alpha. Its converter follows the alpha docs (prefix classes, `
 The CSS grid converter needs a stylesheet:
 
 - The editor adds it to the canvas automatically.
-- Sites using it include `dist/blockfusion-grid.css` (12 columns) or the CSS from `cssGridStylesheet(n)`.
+- Sites using it include `dist/blockfusion-grid.css` (12 columns) or the CSS from `cssGridStylesheet(n)`,
+  as a link or pasted into their own stylesheet.
+- It is layout only: the grid, column spans and the `bf-hidden-*` classes. Everything else,
+  including the `bf-btn` button classes, comes from the site's own CSS.
 
 ### Grid size
 
@@ -244,7 +247,7 @@ Converters also map the utility classes the original contentbuilder converter ha
   - Bootstrap 6: `btn btn-solid theme-secondary` and `btn btn-solid theme-primary`;
   - Foundation: `button secondary` and `button primary`;
   - Tailwind: a set of utilities;
-  - CSS grid: `bf-btn bf-btn-primary` and `bf-btn bf-btn-accent`.
+  - CSS grid: `bf-btn bf-btn-primary` and `bf-btn bf-btn-accent` (styled by the site's CSS).
 
 ### Guarantees (all tested)
 

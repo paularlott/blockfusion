@@ -46,6 +46,8 @@ describe('column count', () => {
 	it('writes the grid size into Tailwind and CSS grid output', () => {
 		expect(conv('tailwind').withColumns!(24).render(twelve())).toContain('class="grid grid-cols-24 gap-6"');
 		expect(conv('cssgrid').withColumns!(16).stylesheet).toContain('repeat(16,minmax(0,1fr))');
+		// layout only: the site styles everything else, buttons included
+		expect(cssGridStylesheet(12)).not.toMatch(/bf-btn|color|background/);
 		expect(cssGridStylesheet(24)).toContain('.bf-md-24{grid-column:span 24}');
 	});
 
