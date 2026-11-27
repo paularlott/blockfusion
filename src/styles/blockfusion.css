@@ -764,6 +764,14 @@
 .bf-btn-danger-solid:hover {
 	background: color-mix(in srgb, var(--bf-danger-solid) 82%, #000);
 }
+/* Not available yet (e.g. Replace text while the assistant writes): muted, text still readable */
+.bf-btn:disabled,
+.bf-btn:disabled:hover {
+	border-color: var(--bf-border-strong);
+	background: var(--bf-surface-3);
+	color: var(--bf-fg-subtle);
+	cursor: not-allowed;
+}
 .bf-btn-icon {
 	padding: 4px;
 	border-color: transparent;
@@ -987,6 +995,10 @@ select.bf-input {
 	.bf-block,
 	.bf-layout {
 		border: 1px solid ButtonText;
+	}
+	.bf-btn:disabled {
+		border-color: GrayText;
+		color: GrayText;
 	}
 	.bf-tbtn[aria-pressed="true"],
 	.bf-layout:has(:checked) {
