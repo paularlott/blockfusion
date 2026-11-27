@@ -72,6 +72,14 @@ export const CANVAS_CSS = `
 .bf-cbtn:focus-visible { outline: 3px solid var(--bf-c-ring); outline-offset: 2px; }
 .bf-cbtn svg { width: 16px; height: 16px; }
 .bf-raw-preview { display: block; width: 100%; min-height: 120px; margin-top: 8px; border: 1px solid #cbd3dd; background: #ffffff; }
+/* Dark preview: lighter muted text and ring, and a dark placeholder box (all AA on #0f172a to #1e293b) */
+.bf-canvas-dark { --bf-c-ring: #22d3ee; --bf-c-muted: #a3b0c2; --bf-c-line: #8a96a8; }
+.bf-canvas-dark .bf-raw-box { background: #1e293b; color: #f1f5f9; }
+.bf-canvas-dark .bf-raw-code { color: #cbd5e1; }
+.bf-canvas-dark .bf-cbtn { border-color: #22d3ee !important; background: #0f172a !important; color: #a5f3fc !important; }
+.bf-canvas-dark .bf-cbtn:hover { background: #164e63 !important; color: #ffffff !important; }
+.bf-canvas-dark .bf-cbtn[aria-pressed="true"] { background: #22d3ee !important; color: #0f172a !important; }
+.bf-canvas-dark .bf-raw-preview { border-color: #475569; }
 
 /* Add-row bar at the end of the canvas. */
 .bf-addbar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 16px 0; margin-top: 8px; border-top: 1px dashed var(--bf-c-line); }

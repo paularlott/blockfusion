@@ -181,6 +181,8 @@ export class Canvas {
 		const mode = this.colorMode;
 		// Drives prefers-color-scheme and light-dark() inside the canvas
 		this.iframe.style.colorScheme = mode;
+		// The editor's own placeholders and buttons follow the preview
+		this.doc?.documentElement.classList.toggle('bf-canvas-dark', mode === 'dark');
 		const t = this.siteTheme;
 		if (!this.doc || !t || t === 'media') return;
 		if (typeof t === 'function') t(this.doc, mode);
