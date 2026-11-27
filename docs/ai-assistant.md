@@ -63,9 +63,10 @@ Options:
 - **`body`**: extra fields for every request, e.g. `{ reasoning_effort: 'none' }` to keep a thinking model quick.
 - **`html`** (default true): rewrites send HTML and take HTML back. Set false for a small model.
 - **`chat`**, **`images`** (default true): turn off the chat (needs tool calls) or image descriptions (needs a model that takes images).
+- **`largeContext`** (default true): the chat sends the whole selection and the whole text of the column the cursor is in (up to 8,000 characters each), so the model can rewrite them. Set false for a small model, which then gets short previews, as the in-browser models do.
 - **`name`** (default "the server"): shown with suggestions ("Suggested by …").
 
-Replies may be streamed (`text/event-stream`) or plain JSON.
+Replies may be streamed (`text/event-stream`) or plain JSON. A slow model can outlast the timeout of a proxy in front of your backend (Apache and nginx often wait only 30 to 60 seconds for the first byte). The backend can start its response straight away and send something harmless while it waits: whitespace before a JSON reply, or comment lines (`: waiting`) in an event stream. As the 200 status has then gone, it reports a later failure in the body, as `{"error": {"message": "…"}}` in the JSON or in a `data:` event, and the editor shows that message.
 
 ## Formatting in rewrites
 
@@ -76,6 +77,6 @@ Replies may be streamed (`text/event-stream`) or plain JSON.
 
 A provider is any object with `describeImage(req)`, `rewrite(req)` and/or `chat(req)`, and `html: true` when its rewrite takes HTML (see `AssistantProvider` in `src/types.ts`); the editor offers only what it has.
 
-`chat` gets the conversation as `{ role, content }` messages. An assistant message carries the actions it asked for in `calls`; the tool message after it reports them, all together in `content` and one per call, in order, in `results`. `context` is an outline of the page as it is now. The assistant bundle also exports the page tools it offers (`PAGE_TOOLS`), the outline (`pageContext(editor)`), and `runPageTool(editor, call)` and `callKey(call)`, for a provider that runs its own loop.
+`chat` gets the conversation as `{ role, content }` messages. An assistant message carries the actions it asked for in `calls`; the tool message after it reports them, all together in `content` and one per call, in order, in `results`. `context` is an outline of the page as it is now: short previews of each column, or, when the provider sets `largeContext`, the whole text of the cursor's column and the selection. The assistant bundle also exports the page tools it offers (`PAGE_TOOLS`), the outline (`pageContext(editor, large)`), and `runPageTool(editor, call)` and `callKey(call)`, for a provider that runs its own loop.
 
 Plugins can add to the image dialog with `editor.imageDialogHooks.push(hook)`: a hook gets `{ editor, src, alt, setDescribed }` each time the dialog opens and may return `{ field, start, close }` (the assistant's **Suggest a description** is one). `demo/ai.html` uses the in-browser models; `demo/ai-server.html` uses `completionsAssistant` with a local Ollama model.

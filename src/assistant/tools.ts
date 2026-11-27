@@ -44,8 +44,42 @@ export const PAGE_TOOLS: AssistantTool[] = [
 
 const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
 
-/** A short description of the page for the model: rows, columns, the start of their text, the cursor. */
-export function pageContext(editor: Editor): string {
+/** How much text the chat context carries: short previews, or whole texts for a model that takes long prompts. */
+const LIMITS = {
+	small: { preview: 90, selection: 300, column: 0 },
+	large: { preview: 200, selection: 8000, column: 8000 },
+};
+
+/**
+ * A column's text in the form write_column takes: paragraphs separated by
+ * blank lines, headings as "# ", list items as "- ".
+ */
+export function columnText(html: string): string {
+	const box = document.createElement('div');
+	box.innerHTML = html;
+	const out: string[] = [];
+	const words = (el: Element) => (el.textContent ?? '').replace(/\s+/g, ' ').trim();
+	const walk = (node: Element) => {
+		for (const el of Array.from(node.children)) {
+			const tag = el.tagName;
+			if (/^H[1-6]$/.test(tag)) out.push(`# ${words(el)}`);
+			else if (tag === 'UL' || tag === 'OL') out.push(Array.from(el.children).map((li) => `- ${words(li)}`).join('\n'));
+			else if (tag === 'DIV' || tag === 'SECTION' || tag === 'ARTICLE' || tag === 'BLOCKQUOTE') walk(el);
+			else out.push(words(el));
+		}
+	};
+	walk(box);
+	if (!box.children.length) out.push(words(box));
+	return out.filter(Boolean).join('\n\n');
+}
+
+/**
+ * A description of the page for the model: rows, columns, their text (the
+ * start of it, or with `large` the whole of the cursor's column), the cursor
+ * and the selection.
+ */
+export function pageContext(editor: Editor, large = false): string {
+	const limit = large ? LIMITS.large : LIMITS.small;
 	const doc = editor.doc;
 	const lines = ['Page outline:'];
 	if (!doc.rows.length) lines.push('(the page is empty)');
@@ -59,17 +93,32 @@ export function pageContext(editor: Editor): string {
 			const el = document.createElement('div');
 			el.innerHTML = c.html;
 			const text = (el.textContent ?? '').replace(/\s+/g, ' ').trim();
-			return `[column ${j + 1}] ${text ? `"${clip(text, 90)}"` : '(empty)'}`;
+			return `[column ${j + 1}] ${text ? `"${clip(text, limit.preview)}"` : '(empty)'}`;
 		});
 		lines.push(`Row ${i + 1}, ${row.cols.length} column${row.cols.length > 1 ? 's' : ''}: ${cols.join(' ')}`);
 	});
 	const rowIdx = editor.activeRow ? doc.rows.findIndex((r) => r.id === editor.activeRow) : -1;
 	const colRef = editor.activeCol ? findCol(doc, editor.activeCol) : undefined;
-	if (colRef) lines.push(`The cursor is in row ${colRef.rowIndex + 1}, column ${colRef.colIndex + 1}.`);
+	if (colRef) {
+		lines.push(`The cursor is in row ${colRef.rowIndex + 1}, column ${colRef.colIndex + 1}.`);
+		const col = colRef.col;
+		if (limit.column && col.kind !== 'raw') {
+			const text = columnText(col.html);
+			if (text) {
+				const cut = text.length > limit.column;
+				lines.push(`The whole text of that column${cut ? ` (its first ${limit.column} characters; it is longer)` : ''}, in the form write_column takes:\n"""\n${cut ? text.slice(0, limit.column) : text}\n"""`);
+			}
+		}
+	}
 	else if (rowIdx >= 0) lines.push(`The current row is row ${rowIdx + 1}.`);
 	else lines.push('No row is selected; new rows go at the end.');
 	const sel = editor.canvas.range;
-	if (sel && !sel.collapsed && sel.toString().trim()) lines.push(`Selected text: "${clip(sel.toString().trim(), 300)}"`);
+	const selected = sel && !sel.collapsed ? sel.toString().trim() : '';
+	if (selected) {
+		if (selected.length > limit.selection) lines.push(`Selected text (the first ${limit.selection} characters; the selection is longer): "${selected.slice(0, limit.selection)}"`);
+		else lines.push(`Selected text${large ? ' (all of it)' : ''}: "${selected}"`);
+		lines.push('To change only the selected text, use insert_text: it replaces the selection.');
+	}
 	return lines.join('\n');
 }
 

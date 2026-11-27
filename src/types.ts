@@ -88,6 +88,13 @@ export interface AssistantProvider {
 	 * text goes out with Markdown-style marks for its formatting.
 	 */
 	html?: boolean;
+	/**
+	 * The model takes long prompts (a server model): the chat's page context
+	 * then carries the whole selection and the whole text of the column the
+	 * cursor is in, so the model can rewrite them. Otherwise it gets short
+	 * previews, which suit small in-browser models.
+	 */
+	largeContext?: boolean;
 	/** Describe an image for its alt text. `image` is the file when the editor could read it. */
 	describeImage?(req: {
 		src: string;

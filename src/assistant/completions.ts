@@ -66,6 +66,12 @@ export interface CompletionsAssistantOptions {
 	html?: boolean;
 	/** Offer the chat (the model must support tool calls). Default true. */
 	chat?: boolean;
+	/**
+	 * The model takes long prompts, so the chat sends the whole selection and
+	 * the whole text of the cursor's column. Default true; false for a small
+	 * model, which gets short previews.
+	 */
+	largeContext?: boolean;
 	/** Describe images (the model must take images). Default true. */
 	images?: boolean;
 	/** Shown with suggestions. Default "the server". */
@@ -113,11 +119,23 @@ export function completionsAssistant(o: CompletionsAssistantOptions): AssistantP
 		return res;
 	};
 
+	/**
+	 * A backend that starts its response before the model answers (to keep a
+	 * proxy from timing out) can only report a later failure in the body: an
+	 * `error` in the JSON, or in an event.
+	 */
+	const failed = (j: { error?: unknown } | null | undefined): void => {
+		const e = j?.error;
+		if (!e) return;
+		throw new Error(String(typeof e === 'object' ? ((e as { message?: string }).message ?? JSON.stringify(e)) : e));
+	};
+
 	/** The reply's text: streamed as it comes (event stream) or read whole (JSON). */
 	const text = async (body: CompletionsRequest, signal: AbortSignal, onToken?: (t: string) => void): Promise<string> => {
 		const res = await request({ ...body, stream: true }, signal);
 		if (!(res.headers.get('Content-Type') ?? '').includes('event-stream') || !res.body) {
 			const j = await res.json();
+			failed(j);
 			return String(j?.choices?.[0]?.message?.content ?? '');
 		}
 		const reader = res.body.getReader();
@@ -133,12 +151,14 @@ export function completionsAssistant(o: CompletionsAssistantOptions): AssistantP
 				const line = buf.slice(0, nl).trim();
 				buf = buf.slice(nl + 1);
 				if (!line.startsWith('data:') || line === 'data: [DONE]') continue;
-				let delta: string | undefined;
+				let event: { error?: unknown; choices?: Array<{ delta?: { content?: string } }> } | undefined;
 				try {
-					delta = JSON.parse(line.slice(5)).choices?.[0]?.delta?.content;
+					event = JSON.parse(line.slice(5));
 				} catch {
 					/* a partial or foreign line */
 				}
+				failed(event);
+				const delta = event?.choices?.[0]?.delta?.content;
 				if (delta) {
 					out += delta;
 					onToken?.(delta);
@@ -149,7 +169,7 @@ export function completionsAssistant(o: CompletionsAssistantOptions): AssistantP
 	};
 
 	const html = o.html ?? true;
-	const provider: AssistantProvider = { name: o.name ?? 'the server', html };
+	const provider: AssistantProvider = { name: o.name ?? 'the server', html, largeContext: o.largeContext ?? true };
 
 	provider.rewrite = ({ text: input, instruction, format, lang, signal, onToken }) => {
 		const reply =
@@ -232,7 +252,9 @@ export function completionsAssistant(o: CompletionsAssistantOptions): AssistantP
 				},
 				signal,
 			);
-			const msg = (await res.json())?.choices?.[0]?.message ?? {};
+			const j = await res.json();
+			failed(j);
+			const msg = j?.choices?.[0]?.message ?? {};
 			const calls: AssistantToolCall[] = (msg.tool_calls ?? []).map((c: { function?: { name?: string; arguments?: string } }) => {
 				let args: Record<string, unknown> = {};
 				try {

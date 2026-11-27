@@ -388,7 +388,26 @@ function chatPanel(editor: Editor, close?: () => void) {
 				busy = new AbortController();
 				send.hidden = true;
 				stop.hidden = false;
-				status.textContent = 'Thinking…';
+				// The step and how long it has taken, so a slow model reads as working, not stuck
+				let step = 'Thinking…';
+				let since = Date.now();
+				const setStep = (text: string) => {
+					step = text;
+					since = Date.now();
+					status.textContent = text;
+				};
+				// The seconds are for sighted users: a live region read out every second would be noise
+				const ticker = window.setInterval(() => {
+					const s = Math.round((Date.now() - since) / 1000);
+					if (s < 5 || !/…$/.test(step)) return;
+					let clock = status.querySelector<HTMLElement>('.bf-chat-elapsed');
+					if (!clock) {
+						clock = h('span', { className: 'bf-chat-elapsed', 'aria-hidden': 'true' });
+						status.append(' ', clock);
+					}
+					clock.textContent = `${s} s`;
+				}, 1000);
+				setStep('Thinking…');
 				const startChanges = changes;
 				let actions = 0;
 				let reply: HTMLElement | null = null;
@@ -401,7 +420,7 @@ function chatPanel(editor: Editor, close?: () => void) {
 						const res = await provider.chat!({
 							messages: history,
 							tools: PAGE_TOOLS,
-							context: pageContext(ed),
+							context: pageContext(ed, !!provider.largeContext),
 							lang: ed.canvas.doc.documentElement.lang || document.documentElement.lang || 'en',
 							signal: busy.signal,
 							onToken: (t) => {
@@ -415,6 +434,7 @@ function chatPanel(editor: Editor, close?: () => void) {
 								}
 							},
 							onProgress: (p) => {
+								step = '';
 								status.textContent = p.progress !== undefined ? `${p.text} (${Math.round(p.progress * 100)}%)` : p.text;
 							},
 						});
@@ -445,12 +465,13 @@ function chatPanel(editor: Editor, close?: () => void) {
 							bubble('note', r.report);
 						}
 						history.push({ role: 'tool', content: reports.join(' '), results: reports });
-						status.textContent = 'Working…';
+						setStep('Working…');
 					}
 				} catch (err) {
 					if ((err as Error).name === 'AbortError') bubble('note', 'Stopped.');
 					else bubble('note', `The assistant couldn't help: ${(err as Error).message}`);
 				} finally {
+					window.clearInterval(ticker);
 					busy = null;
 					send.hidden = false;
 					stop.hidden = true;
