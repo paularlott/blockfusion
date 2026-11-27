@@ -32,6 +32,7 @@ export const tailwind = createGridConverter((columns) => ({
 			[['button', 'primary'], TAILWIND_PRIMARY],
 			[['button', 'accent'], TAILWIND_ACCENT],
 		],
+		image: ['max-w-full', 'h-auto'],
 		visibility: {
 			kind: 'display',
 			ranges: ['xs', 'sm', 'md', 'lg', 'xl', 'xxl'],

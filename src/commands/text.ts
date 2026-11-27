@@ -4,6 +4,8 @@
  * the heavy lifting; font, size and colour use a marker so the result is a
  * clean <span style> rather than legacy <font> tags.
  */
+import { NEUTRAL_FLUID_IMAGE } from '../converters/classmap';
+import type { Converter } from '../converters/types';
 import { escapeHtml } from '../converters/html';
 import type { Editor } from '../editor';
 
@@ -318,6 +320,30 @@ export interface ImageSpec {
 	height?: number;
 }
 
+/**
+ * Let an image shrink to fit its column: the framework's fluid image class
+ * (img-fluid, img-responsive, max-w-full h-auto, bf-img, ...).
+ */
+export function fluidImage(img: HTMLImageElement, converter: Converter): void {
+	for (const c of converter.toFramework([NEUTRAL_FLUID_IMAGE])) img.classList.add(c);
+}
+
+/**
+ * Insert an image at the caret. Chrome's insertHTML copies the surrounding
+ * text's computed style onto it (style="font-size: 1rem"), so the image goes
+ * in marked and gets back exactly the style it was given.
+ */
+export function insertImage(d: Document, content: Element, img: HTMLImageElement): void {
+	const style = img.getAttribute('style');
+	img.setAttribute('data-bf-new', '');
+	d.execCommand('insertHTML', false, img.outerHTML.replace(' class=""', ''));
+	for (const el of Array.from(content.querySelectorAll('img[data-bf-new]'))) {
+		el.removeAttribute('data-bf-new');
+		if (style) el.setAttribute('style', style);
+		else el.removeAttribute('style');
+	}
+}
+
 export function applyImage(editor: Editor, spec: ImageSpec, existing: HTMLImageElement | null): boolean {
 	return editor.runText(existing ? 'Edit image' : 'Insert image', (d, content) => {
 		const target = existing && content.contains(existing) ? existing : d.createElement('img');
@@ -327,9 +353,10 @@ export function applyImage(editor: Editor, spec: ImageSpec, existing: HTMLImageE
 			if (spec[k]) target.setAttribute(k, String(spec[k]));
 			else target.removeAttribute(k);
 		}
+		if (editor.options.fluidImages) fluidImage(target as HTMLImageElement, editor.converter);
 		if (target !== existing) {
 			target.classList.remove('bf-selected');
-			d.execCommand('insertHTML', false, target.outerHTML.replace(' class=""', ''));
+			insertImage(d, content, target as HTMLImageElement);
 		}
 	});
 }

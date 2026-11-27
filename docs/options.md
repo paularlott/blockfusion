@@ -24,6 +24,7 @@
 | `minHeight` | `'320px'` | Minimum canvas height in auto mode. |
 | `label` | `'Page editor'` | Accessible name of the editor region. |
 | `rawMarkers` | `true` | Wrap raw code in `<!--bf:raw-->…<!--/bf:raw-->` so it's recognised again on load. |
+| `fluidImages` | `true` | Give inserted, uploaded and edited images the framework's fluid image class (`img-fluid`, `img-responsive`, `bf-img`, ...) so a large image shrinks to fit its column. See [Frameworks](frameworks.md). |
 | `toolbar` | all items | Toolbar item ids in order, with `'\|'` for a separator. |
 | `codeEditor` | textarea | A code editor factory (see [the Ace example](plugins.md#code-editor-hook-eg-ace)). |
 | `plugins` | `[]` | Extra [plugins](plugins.md). |

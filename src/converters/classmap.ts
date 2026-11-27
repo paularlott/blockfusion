@@ -4,6 +4,7 @@
  * Neutral vocabulary (what the model stores):
  *   hidden-xs ... hidden-xxl         hidden in that width range only
  *   button primary / button accent   the two standard buttons
+ *   img-fluid                        an image that shrinks to fit its column
  *
  * "Visible only in range X" is stored as hidden in every other range, so each
  * visibility state has exactly one neutral form and round trips are exact.
@@ -62,9 +63,14 @@ function coverOf(fr: Range[], r: Range): Range[] {
 	return RANGES.slice(from, to);
 }
 
+/** The neutral class for an image that shrinks to fit its column. */
+export const NEUTRAL_FLUID_IMAGE = 'img-fluid';
+
 export interface UtilityConfig {
 	/** [neutral tokens, framework tokens] pairs. */
 	buttons?: Array<[string[], string[]]>;
+	/** The framework's classes for a fluid image (neutral img-fluid). Default img-fluid. */
+	image?: string[];
 	visibility?: ClassVisibility | DisplayVisibility;
 }
 
@@ -118,7 +124,8 @@ function hiddenTokens(hidden: Set<Range>): string[] {
 }
 
 export function makeClassMapper(cfg: UtilityConfig): ClassMapper {
-	const buttons = cfg.buttons ?? [];
+	const buttons: Array<[string[], string[]]> = [...(cfg.buttons ?? [])];
+	if (cfg.image) buttons.push([[NEUTRAL_FLUID_IMAGE], cfg.image]);
 	const vis = cfg.visibility;
 
 	return {

@@ -26,7 +26,7 @@ function row(cols: Array<[number, string]>, className?: string): Row {
 	};
 }
 
-const img = (w: number, h: number, label: string, alt: string) => `<img src="${placeholder(w, h, label)}" alt="${alt}" width="${w}" height="${h}">`;
+const img = (w: number, h: number, label: string, alt: string) => `<img src="${placeholder(w, h, label)}" alt="${alt}" width="${w}" height="${h}" class="img-fluid">`;
 
 export const DEFAULT_BLOCKS: Block[] = [
 	{

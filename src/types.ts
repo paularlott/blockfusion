@@ -376,6 +376,12 @@ export interface EditorOptions {
 	label?: string;
 	/** Write raw-code markers in the output so raw blocks are recognised again. Default true. */
 	rawMarkers?: boolean;
+	/**
+	 * Give inserted and edited images the framework's fluid image class
+	 * (img-fluid, img-responsive, ...) so a large image shrinks to fit its
+	 * column. Default true.
+	 */
+	fluidImages?: boolean;
 	/** Toolbar item ids in order ('|' for a separator). Defaults to all items. */
 	toolbar?: string[];
 	codeEditor?: CodeEditorFactory;

@@ -22,6 +22,7 @@ export const bootstrap3 = createGridConverter({
 			[['button', 'primary'], ['btn', 'btn-default']],
 			[['button', 'accent'], ['btn', 'btn-primary']],
 		],
+		image: ['img-responsive'],
 		visibility: {
 			kind: 'classes',
 			hidden: { xs: 'hidden-xs', sm: 'hidden-sm', md: 'hidden-md', lg: 'hidden-lg' },

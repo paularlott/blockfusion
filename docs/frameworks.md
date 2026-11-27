@@ -31,7 +31,8 @@ The CSS grid converter needs a stylesheet:
 - The editor adds it to the canvas automatically.
 - Sites using it include `dist/blockfusion-grid.css` (12 columns) or the CSS from `cssGridStylesheet(n)`,
   as a link or pasted into their own stylesheet.
-- It is layout only: the grid, column spans and the `bf-hidden-*` classes. Everything else,
+- It is layout only: the grid, column spans, the `bf-hidden-*` classes and `bf-img` for images
+  that fit their column. Everything else,
   including the `bf-btn` button classes, comes from the site's own CSS.
 
 ## Grid size
@@ -66,6 +67,14 @@ Converters also map the utility classes the original contentbuilder converter ha
   - Foundation: `button secondary` and `button primary`;
   - Tailwind: a set of utilities;
   - CSS grid: `bf-btn bf-btn-primary` and `bf-btn bf-btn-accent` (styled by the site's CSS).
+- **Fluid images.** The neutral form is `img-fluid`, an image that shrinks to fit its column
+  (`max-width: 100%; height: auto`). New and edited images get it (see the `fluidImages` option):
+  - Bootstrap 5 and 6: `img-fluid`;
+  - Bootstrap 3: `img-responsive`;
+  - Tailwind: `max-w-full h-auto`;
+  - CSS grid: `bf-img`, from the grid stylesheet;
+  - fusionCSS and Foundation: `img-fluid`. Both already make every image fluid in their base CSS;
+    the class keeps it so on conversion to another framework, and a site's own CSS can style it.
 
 ## Guarantees (all tested)
 

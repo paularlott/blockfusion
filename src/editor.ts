@@ -26,7 +26,7 @@ import type {
 	SiteTheme,
 	ToolbarItem,
 } from './types';
-import { normaliseContent, semanticInline, trailingBreaks } from './commands/text';
+import { fluidImage, insertImage, normaliseContent, semanticInline, trailingBreaks } from './commands/text';
 import { Canvas } from './ui/canvas';
 import { deepActiveElement } from './ui/dialog';
 import { h, isMac } from './ui/dom';
@@ -88,6 +88,7 @@ interface ResolvedOptions extends EditorOptions {
 	minHeight: string;
 	label: string;
 	rawMarkers: boolean;
+	fluidImages: boolean;
 }
 
 /** Parse "Mod+Shift+7" and test a keyboard event against it. */
@@ -163,6 +164,7 @@ export class Editor {
 			minHeight: opts.minHeight ?? '320px',
 			label: opts.label ?? 'Page editor',
 			rawMarkers: opts.rawMarkers !== false,
+			fluidImages: opts.fluidImages !== false,
 		};
 		this.converter = this.resolveConverter(this.options.converter);
 		this.media = opts.media ?? null;
@@ -1103,11 +1105,12 @@ export class Editor {
 			try {
 				const res = await this.media.upload(file);
 				const alt = res.alt ?? '';
-				this.runText('Insert image', (doc) => {
+				this.runText('Insert image', (doc, content) => {
 					const img = doc.createElement('img');
 					img.src = res.src;
 					img.alt = alt;
-					doc.execCommand('insertHTML', false, img.outerHTML);
+					if (this.options.fluidImages) fluidImage(img, this.converter);
+					insertImage(doc, content, img);
 				});
 				this.announce(alt ? `Image uploaded: ${alt}` : 'Image uploaded. Add alt text with the image button.');
 			} catch (err) {

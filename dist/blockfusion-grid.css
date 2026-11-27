@@ -2,6 +2,7 @@
 .bf-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:var(--bf-grid-gap,1.5rem)}
 .bf-grid>*{grid-column:span 12;min-width:0}
 .bf-col-1{grid-column:span 1}.bf-col-2{grid-column:span 2}.bf-col-3{grid-column:span 3}.bf-col-4{grid-column:span 4}.bf-col-5{grid-column:span 5}.bf-col-6{grid-column:span 6}.bf-col-7{grid-column:span 7}.bf-col-8{grid-column:span 8}.bf-col-9{grid-column:span 9}.bf-col-10{grid-column:span 10}.bf-col-11{grid-column:span 11}.bf-col-12{grid-column:span 12}
+.bf-img{max-width:100%;height:auto}
 @media (max-width:767.98px){.bf-hidden-xs{display:none!important}}
 @media (min-width:768px){.bf-sm-1{grid-column:span 1}.bf-sm-2{grid-column:span 2}.bf-sm-3{grid-column:span 3}.bf-sm-4{grid-column:span 4}.bf-sm-5{grid-column:span 5}.bf-sm-6{grid-column:span 6}.bf-sm-7{grid-column:span 7}.bf-sm-8{grid-column:span 8}.bf-sm-9{grid-column:span 9}.bf-sm-10{grid-column:span 10}.bf-sm-11{grid-column:span 11}.bf-sm-12{grid-column:span 12}}
 @media (min-width:768px) and (max-width:991.98px){.bf-hidden-sm{display:none!important}}

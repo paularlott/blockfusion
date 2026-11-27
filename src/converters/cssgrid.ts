@@ -4,8 +4,9 @@
  * Breakpoints match fusionCSS: 768, 992, 1200 and 1600px, plus 1920px.
  * Hosts using this converter on their site include `dist/blockfusion-grid.css`
  * (12 columns) or the CSS from `cssGridStylesheet(n)` for another grid size.
- * The stylesheet is layout only (grid, spans, responsive hiding): everything
- * else, including the `bf-btn` button classes, is styled by the site's own CSS.
+ * The stylesheet is layout only (grid, spans, responsive hiding, and `bf-img`
+ * for images that fit their column): everything else, including the `bf-btn`
+ * button classes, is styled by the site's own CSS.
  */
 import { createGridConverter, spanParser } from './grid';
 
@@ -32,6 +33,8 @@ export function cssGridStylesheet(columns = 12): string {
 		`.bf-grid{display:grid;grid-template-columns:repeat(${columns},minmax(0,1fr));gap:var(--bf-grid-gap,1.5rem)}`,
 		`.bf-grid>*{grid-column:span ${columns};min-width:0}`,
 		spans('col', columns),
+		// Images shrink to fit their column
+		`.bf-img{max-width:100%;height:auto}`,
 		`@media (max-width:${WIDTHS[0][1] - 0.02}px){.bf-hidden-xs{display:none!important}}`,
 	];
 	WIDTHS.forEach(([name, min], i) => {
@@ -61,6 +64,7 @@ export const cssgrid = createGridConverter((columns) => ({
 			[['button', 'primary'], ['bf-btn', 'bf-btn-primary']],
 			[['button', 'accent'], ['bf-btn', 'bf-btn-accent']],
 		],
+		image: ['bf-img'],
 		visibility: {
 			kind: 'classes',
 			hidden: { xs: 'bf-hidden-xs', sm: 'bf-hidden-sm', md: 'bf-hidden-md', lg: 'bf-hidden-lg', xl: 'bf-hidden-xl', xxl: 'bf-hidden-xxl' },
