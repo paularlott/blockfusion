@@ -12,6 +12,11 @@ const ALLOWED = new Set([
 	'A', 'ABBR', 'B', 'BDI', 'BDO', 'BR', 'CITE', 'CODE', 'DATA', 'DEL', 'DFN', 'EM', 'I', 'IMG', 'INS', 'KBD', 'LI', 'MARK',
 	'OL', 'Q', 'S', 'SAMP', 'SMALL', 'SPAN', 'STRONG', 'SUB', 'SUP', 'TIME', 'U', 'UL', 'VAR', 'WBR',
 ]);
+/** Also kept when a whole column is written (blocks, tables). */
+const BLOCK_ALLOWED = new Set([
+	'P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'PRE', 'DIV', 'FIGURE', 'FIGCAPTION', 'HR', 'DL', 'DT', 'DD',
+	'TABLE', 'CAPTION', 'COLGROUP', 'COL', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TH', 'TD',
+]);
 /** Dropped with everything in them. */
 const DROPPED = new Set([
 	'SCRIPT', 'STYLE', 'IFRAME', 'FRAME', 'FRAMESET', 'OBJECT', 'EMBED', 'APPLET', 'TEMPLATE', 'NOSCRIPT', 'LINK', 'META', 'BASE',
@@ -25,6 +30,9 @@ const TAG_ATTRS: Record<string, Set<string>> = {
 	ABBR: new Set(['title']),
 	DATA: new Set(['value']),
 	TIME: new Set(['datetime']),
+	TD: new Set(['colspan', 'rowspan']),
+	TH: new Set(['colspan', 'rowspan', 'scope']),
+	BLOCKQUOTE: new Set(['cite']),
 	Q: new Set(['cite']),
 	DEL: new Set(['cite', 'datetime']),
 	INS: new Set(['cite', 'datetime']),
@@ -48,18 +56,22 @@ function safeStyle(value: string): boolean {
 	return !/url\s*\(|image-set|expression\s*\(|@import|behaviou?r\s*:|-moz-binding|javascript:/i.test(value);
 }
 
-/** Parse `html` inertly and return its sanitised content. */
-export function sanitizeHtml(html: string, doc: Document): DocumentFragment {
+/**
+ * Parse `html` inertly and return its sanitised content. Text-level markup
+ * only, or with `blocks` the block markup a column holds too (paragraphs,
+ * headings, quotes, tables).
+ */
+export function sanitizeHtml(html: string, doc: Document, opts: { blocks?: boolean } = {}): DocumentFragment {
 	// A template parses without running scripts or loading images
 	const tpl = doc.createElement('template');
 	tpl.innerHTML = html;
-	clean(tpl.content);
+	clean(tpl.content, !!opts.blocks);
 	const out = doc.createDocumentFragment();
 	out.append(doc.importNode(tpl.content, true));
 	return out;
 }
 
-function clean(parent: ParentNode): void {
+function clean(parent: ParentNode, blocks: boolean): void {
 	for (const node of Array.from(parent.childNodes)) {
 		if (node.nodeType === 3) continue;
 		if (node.nodeType !== 1) {
@@ -72,8 +84,8 @@ function clean(parent: ParentNode): void {
 			el.remove();
 			continue;
 		}
-		clean(el);
-		if (!ALLOWED.has(tag)) {
+		clean(el, blocks);
+		if (!ALLOWED.has(tag) && !(blocks && BLOCK_ALLOWED.has(tag))) {
 			// Unknown or block-level: keep its content, lose the element
 			el.replaceWith(...Array.from(el.childNodes));
 			continue;

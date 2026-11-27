@@ -9,6 +9,8 @@ function fakeEditor(selected = ''): Editor {
 	const html = `<h2>Garden news</h2><p>${long}</p><ul><li>Lavender</li><li>Catmint — by the gate</li></ul>`;
 	return {
 		doc: { rows: [{ id: 'r1', kind: 'grid', cols: [{ id: 'c1', kind: 'rich', span: { base: 12 }, html }] }] },
+		columns: 12,
+		options: { breakpoint: 'md' },
 		activeRow: 'r1',
 		activeCol: 'c1',
 		canvas: { range: selected ? { collapsed: false, toString: () => selected } : null },
@@ -31,5 +33,11 @@ describe('chat page context', () => {
 		expect(ctx).toContain(`The whole text of that column, in the form write_column takes:\n"""\n# Garden news\n\n${long}\n\n- Lavender\n- Catmint — by the gate\n"""`);
 		expect(ctx).toContain(`Selected text (all of it): "${long}"`);
 		expect(ctx).toContain('use insert_text');
+	});
+
+	it('says how many rows there are and how wide each column is', () => {
+		const ctx = pageContext(fakeEditor());
+		expect(ctx).toContain('Page outline: 1 row, on a grid 12 columns wide.');
+		expect(ctx).toContain('Row 1, 1 column (12):');
 	});
 });

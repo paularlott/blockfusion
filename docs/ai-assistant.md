@@ -17,7 +17,21 @@ The **Assistant** button (sparkle icon) is a split button when chat is on: the b
 
 - **Images:** the image dialog gets **Suggest a description**, which fills in the alt text for the author to check and edit; **Describe the selected image…** opens it for the selected image and starts straight away.
 - **One-shot actions** on the selection or the paragraph the cursor is in. The suggestion streams into a dialog, where the author can edit it; **Replace text** applies it as one undo step. Each paragraph or list item is rewritten in its own request and keeps its element and attributes, and inline formatting (bold, links, styled text) is kept; see [Formatting](#formatting-in-rewrites).
-- **Chat** (`assistantChat: true`): the Assistant button (or Mod+; then A) opens a popover, centred under the toolbar, to talk to the assistant and have it change the page: "add a row with 3 columns", "in row 2 column 1 write a short welcome". The model sees an outline of the page (rows, columns, the start of their text, the cursor) and can add rows, write into columns and type at the cursor; there's no delete. Text it writes can carry `**bold**`, `*italic*` and `` `code` ``, which become formatting. Each change is an undo step, and the latest request's changes have an Undo button in the chat. The conversation, and a request still running, carry on while the chat is closed. A request stops when the model says it's done, repeats itself, or after six rounds.
+- **Chat** (`assistantChat: true`): the Assistant button (or Mod+; then A) opens a popover, centred under the toolbar, to talk to the assistant and have it change the page: "add a row with 3 columns", "in row 2 column 1 write a short welcome". The model sees an outline of the page (how many rows, each row's columns and their widths, the start of their text, the cursor and selection) and works through these tools:
+
+  | Tool | What it does | Offered to |
+  | --- | --- | --- |
+  | `add_row` | Adds a row of equal columns (any number that divides the page's grid: 1, 2, 3, 4, 6 or 12 on a 12 column grid), or of chosen widths that add up to the grid (`spans`, such as 8 + 4). `rows` adds several identical rows, up to 5. The tool's description gives the model the grid's own numbers. | all |
+  | `write_column` | Replaces a column's content with text: paragraphs, `# ` headings, and `**bold**`, `*italic*` and `` `code` ``. | all |
+  | `insert_text` | Replaces the selection, or types at the cursor. | all |
+  | `replace_text` | Finds and replaces text on the whole page or in one row or column, inside the existing markup, so links and formatting stay. A match can't span two formats. | all |
+  | `read_column` | Returns one column in full (HTML for an HTML provider, else text). Changes nothing. | all |
+  | `write_column_html` | Replaces a column's content with HTML, sanitised as for rewrites but with block markup (headings, lists, tables), classes and safe styles kept. | providers with `html` and `largeContext` |
+  | `remove_row`, `move_row` | Remove a row, or move it to a position. Rows of HTML code are left alone. | providers with `largeContext` |
+  | `read_row` | Returns every column of one row in full. Changes nothing. | providers with `largeContext` |
+  | `read_page` | Returns the text of every column (up to 30,000 characters). Changes nothing. | providers with `largeContext` |
+
+  Small (in-browser) models get the short list, which they follow more reliably. Each change is an undo step, and the latest request's changes have an Undo button in the chat; reading shows as a short note and isn't counted as a change. The conversation, and a request still running, carry on while the chat is closed, and the status line shows how long the current step has taken. A request stops when the model says it's done, repeats an action, or after eight rounds.
 
 ```js
 BlockFusion.create(el, {
@@ -77,6 +91,6 @@ Replies may be streamed (`text/event-stream`) or plain JSON. A slow model can ou
 
 A provider is any object with `describeImage(req)`, `rewrite(req)` and/or `chat(req)`, and `html: true` when its rewrite takes HTML (see `AssistantProvider` in `src/types.ts`); the editor offers only what it has.
 
-`chat` gets the conversation as `{ role, content }` messages. An assistant message carries the actions it asked for in `calls`; the tool message after it reports them, all together in `content` and one per call, in order, in `results`. `context` is an outline of the page as it is now: short previews of each column, or, when the provider sets `largeContext`, the whole text of the cursor's column and the selection. The assistant bundle also exports the page tools it offers (`PAGE_TOOLS`), the outline (`pageContext(editor, large)`), and `runPageTool(editor, call)` and `callKey(call)`, for a provider that runs its own loop.
+`chat` gets the conversation as `{ role, content }` messages. An assistant message carries the actions it asked for in `calls`; the tool message after it reports them, all together in `content` and one per call, in order, in `results`. `context` is an outline of the page as it is now: short previews of each column, or, when the provider sets `largeContext`, the whole text of the cursor's column and the selection. The assistant bundle also exports the page tools (`PAGE_TOOLS`, and `pageTools(provider)` for the ones a provider is offered), the outline (`pageContext(editor, large)`), `runPageTool(editor, call, provider)` (its result's `report` is for the model, `note` for the reader, and `changed` is false for reading), `replaceInHtml` and `callKey(call)`, for a provider that runs its own loop.
 
 Plugins can add to the image dialog with `editor.imageDialogHooks.push(hook)`: a hook gets `{ editor, src, alt, setDescribed }` each time the dialog opens and may return `{ field, start, close }` (the assistant's **Suggest a description** is one). `demo/ai.html` uses the in-browser models; `demo/ai-server.html` uses `completionsAssistant` with a local Ollama model.

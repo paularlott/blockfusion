@@ -21,7 +21,8 @@ import { completionsAssistant } from './completions';
 
 export { assistantPlugin, completionsAssistant, DEFAULT_ASSISTANT_ACTIONS };
 export type { CompletionsAssistantOptions, CompletionsMessage, CompletionsRequest } from './completions';
-export { callKey, pageContext, PAGE_TOOLS, runPageTool } from './tools';
+export { callKey, pageContext, pageTools, PAGE_TOOLS, READ_TOOLS, replaceInHtml, runPageTool } from './tools';
+export type { PageToolResult } from './tools';
 
 // Loaded as a script after blockfusion.js: register with the editor straight away
 const g = globalThis as { BlockFusion?: { use?(p: Plugin): void } };

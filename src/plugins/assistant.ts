@@ -16,7 +16,7 @@ import type { Editor } from '../editor';
 import { addAssistantStyles } from '../assistant/styles';
 import { type Marks, type Own, rebuild, toMarked } from '../assistant/marked';
 import { sanitizeHtml } from '../assistant/sanitize';
-import { PAGE_TOOLS, callKey, pageContext, runPageTool } from '../assistant/tools';
+import { callKey, pageContext, pageTools, runPageTool } from '../assistant/tools';
 import type { AssistantAction, AssistantMessage, ImageDialogHook, MenuItem, Plugin } from '../types';
 import { openDialog } from '../ui/dialog';
 import { h, nextId } from '../ui/dom';
@@ -321,9 +321,10 @@ const describeHook: ImageDialogHook = ({ editor, src, alt, setDescribed }) => {
 };
 
 /** How many rounds of actions one request may take, so a confused model can't run on. */
-const MAX_ROUNDS = 6;
+// Reading a column first takes a round, so a little more than the actions need
+const MAX_ROUNDS = 8;
 
-/** The chat: a conversation that can change the page through PAGE_TOOLS. */
+/** The chat: a conversation that can read and change the page through the page tools. */
 function chatPanel(editor: Editor, close?: () => void) {
 	const provider = editor.assistant!;
 	const history: AssistantMessage[] = [];
@@ -419,7 +420,7 @@ function chatPanel(editor: Editor, close?: () => void) {
 						reply = null;
 						const res = await provider.chat!({
 							messages: history,
-							tools: PAGE_TOOLS,
+							tools: pageTools(provider, ed.columns),
 							context: pageContext(ed, !!provider.largeContext),
 							lang: ed.canvas.doc.documentElement.lang || document.documentElement.lang || 'en',
 							signal: busy.signal,
@@ -459,10 +460,11 @@ function chatPanel(editor: Editor, close?: () => void) {
 						if (reply) (reply as HTMLElement).remove();
 						const reports: string[] = [];
 						for (const call of fresh) {
-							const r = runPageTool(ed, call);
-							actions += r.ok ? 1 : 0;
+							const r = runPageTool(ed, call, provider);
+							// Reading changes nothing, so it isn't one of the changes to undo
+							if (r.ok && r.changed !== false) actions++;
 							reports.push(r.report);
-							bubble('note', r.report);
+							bubble('note', r.note ?? r.report);
 						}
 						history.push({ role: 'tool', content: reports.join(' '), results: reports });
 						setStep('Working…');
